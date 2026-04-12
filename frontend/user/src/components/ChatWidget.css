@@ -1,0 +1,229 @@
+/* --- CSS CHO TOÀN BỘ WIDGET --- */
+.chat-widget-wrapper {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 1000;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* --- CSS CHO KHUNG CHAT --- */
+.chat-container {
+  width: 350px;
+  height: 500px;
+  background-color: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 5px 25px rgba(0, 0, 0, 0.2);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: absolute;
+  bottom: 80px;
+  right: 0;
+
+  transition:
+    transform 0.3s ease,
+    opacity 0.3s ease,
+    visibility 0.3s;
+  transform-origin: bottom right;
+}
+
+.chat-container.hide {
+  opacity: 0;
+  visibility: hidden;
+  transform: scale(0.5);
+}
+
+.chat-container.show {
+  opacity: 1;
+  visibility: visible;
+  transform: scale(1);
+}
+
+.chat-header {
+  background-color: #1e88e5;
+  color: white;
+  padding: 15px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.chat-window {
+  flex: 1;
+  padding: 15px;
+  background-color: #f5f7fa;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* --- STYLE TIN NHẮN & BUBBLE --- */
+.message {
+  max-width: 85%;
+  font-size: 14px;
+  line-height: 1.4;
+  display: flex;
+  flex-direction: column;
+}
+
+.msg-bubble {
+  padding: 10px 15px;
+  border-radius: 15px;
+}
+
+.user-msg {
+  align-self: flex-end;
+}
+
+.user-msg .msg-bubble {
+  background-color: #2196f3;
+  color: white;
+  border-bottom-right-radius: 2px;
+}
+
+.bot-msg {
+  align-self: flex-start;
+}
+
+.bot-msg .msg-bubble {
+  background-color: #e3f2fd;
+  color: #2c3e50;
+  border-bottom-left-radius: 2px;
+}
+
+/* --- NÚT BẤM XEM SẢN PHẨM (MỚI) --- */
+.product-suggest-link {
+  display: block;
+  margin-top: 10px;
+  padding: 8px 12px;
+  background-color: #ffffff;
+  color: #1e88e5 !important; /* Màu xanh của Header */
+  border: 1px solid #1e88e5;
+  border-radius: 8px;
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: bold;
+  text-align: center;
+  transition: all 0.2s ease;
+}
+
+.product-suggest-link:hover {
+  background-color: #1e88e5;
+  color: #ffffff !important;
+  box-shadow: 0 2px 8px rgba(30, 136, 229, 0.3);
+}
+
+/* --- INPUT AREA --- */
+.input-area {
+  display: flex;
+  padding: 12px;
+  background-color: white;
+  border-top: 1px solid #e0e0e0;
+}
+
+.user-input {
+  flex: 1;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  padding: 10px;
+  outline: none;
+}
+
+.send-btn {
+  background-color: #1e88e5;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  padding: 0 15px;
+  margin-left: 8px;
+  cursor: pointer;
+}
+
+.send-btn:disabled {
+  background-color: #ccc;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 1.5rem;
+  cursor: pointer;
+  line-height: 1;
+}
+
+/* --- CSS CHO ICON BONG BÓNG CHAT --- */
+.chat-icon-bubble {
+  width: 60px;
+  height: 60px;
+  background-color: #1a1a1a;
+  border: none;
+  border-radius: 16px;
+  cursor: pointer;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    transform 0.2s,
+    background-color 0.2s;
+  outline: none;
+  padding: 0;
+}
+
+.chat-icon-bubble:hover {
+  transform: scale(1.1);
+}
+
+.speech-bubble {
+  width: 40px;
+  height: 32px;
+  background-color: white;
+  border-radius: 10px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.speech-bubble::after {
+  content: "";
+  position: absolute;
+  bottom: -6px;
+  left: 10px;
+  border-width: 6px 6px 0 0;
+  border-style: solid;
+  border-color: white transparent transparent transparent;
+}
+
+.eyes {
+  display: flex;
+  gap: 5px;
+}
+
+.eye {
+  width: 10px;
+  height: 3px;
+  background-color: #00e676;
+  border-radius: 2px;
+}
+
+/* Animation cho dấu ba chấm typing */
+.typing-loader {
+  font-weight: bold;
+  animation: blink 1s infinite;
+}
+
+@keyframes blink {
+  0% {
+    opacity: 0.2;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.2;
+  }
+}

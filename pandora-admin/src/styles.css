@@ -1,0 +1,68 @@
+:root{
+  --brand-50:#eef7ff;
+  --brand-100:#d8eefe;
+  --brand-200:#b7ddfd;
+  --brand-300:#8fc8fb;
+  --brand-400:#5fb0f7;
+  --brand-500:#2f92f2;
+  --nav-bg:#1f2a4a;
+  --nav-bg-2:#1b2440;
+  --page-bg:#f6f8fc;
+  --card-bg:#ffffff;
+  --text:#111827;
+  --muted:#6b7280;
+  --border:#e6edf7;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,'Apple Color Emoji','Segoe UI Emoji';background:var(--page-bg);color:var(--text)}
+a{color:inherit}
+
+/* Layout */
+.admin-shell{display:flex;min-height:100vh}
+.admin-sidebar{width:260px;background:var(--nav-bg);color:#fff;display:flex;flex-direction:column}
+.admin-content{flex:1;display:flex;flex-direction:column}
+.admin-topbar{height:72px;background:#9fcbeb;display:flex;align-items:center;justify-content:space-between;padding:0 24px;box-shadow:0 1px 0 rgba(0,0,0,.06)}
+.admin-main{padding:26px 26px 40px}
+
+/* Sidebar */
+.brand{display:flex;align-items:center;gap:10px;padding:18px 18px 12px}
+.brand svg{width:34px;height:34px}
+.brand-name{font-weight:800;font-size:22px;letter-spacing:.2px}
+.brand-name span{color:#2f92f2}
+.nav{padding:8px 10px;display:flex;flex-direction:column;gap:4px}
+.nav-item{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:10px;color:#dbe5ff;text-decoration:none;position:relative}
+.nav-item:hover{background:rgba(255,255,255,.07);color:#fff}
+.nav-item.active{background:#ffffff;color:#1f2a4a}
+.nav-item.active .nav-icon{color:#1f2a4a}
+.nav-icon{font-size:18px;color:#dbe5ff}
+.badge{margin-left:auto;background:#0b1220;color:#fff;border-radius:999px;padding:1px 8px;font-size:12px;line-height:20px}
+.promo{margin:16px 12px 14px;background:#2563eb;border-radius:14px;padding:16px;color:#fff}
+.promo h4{margin:0 0 6px;font-size:16px}
+.promo p{margin:0 0 12px;font-size:13px;opacity:.9}
+
+/* Common */
+.page-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:18px}
+.page-title{font-size:28px;font-weight:700;margin:0}
+.card{background:var(--card-bg);border:1px solid var(--border);border-radius:14px;box-shadow:0 1px 0 rgba(17,24,39,.02)}
+.card-pad{padding:18px}
+.grid{display:grid;gap:18px}
+.kpi-row{grid-template-columns:repeat(5,1fr)}
+.kpi-card{padding:14px 16px;display:flex;align-items:flex-start;justify-content:space-between;background:#fff7f3}
+.kpi-card.white{background:#fff}
+.kpi-title{font-size:12px;color:#6b7280;margin:0}
+.kpi-value{font-size:24px;font-weight:700;margin:2px 0 0}
+.kpi-change{font-size:12px;margin-top:6px;display:flex;align-items:center;gap:6px}
+.kpi-change.up{color:#16a34a}
+.kpi-change.down{color:#dc2626}
+.table-card{padding:0}
+.table-head{padding:18px 18px 0}
+.table-title{font-size:20px;font-weight:700;margin:0 0 8px}
+
+/* Ant tweaks */
+.ant-table-wrapper .ant-table{border-radius:12px}
+.ant-table-wrapper .ant-table-container{border-radius:12px}
+.ant-table-thead > tr > th{background:transparent;border-bottom:1px solid var(--border);color:#6b7280;font-weight:600}
+.ant-table-tbody > tr > td{border-bottom:1px solid var(--border)}
+.ant-input-affix-wrapper, .ant-select-selector{border-radius:10px !important}
+.ant-btn{border-radius:10px}

@@ -1,0 +1,156 @@
+.checkout-page {
+  background: #f5f5f5;
+  padding: 40px 0;
+}
+
+.checkout-container {
+  max-width: 1200px;
+  margin: auto;
+  background: #fff;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 40px;
+  padding: 30px;
+  border-radius: 6px;
+}
+
+/* LEFT */
+.checkout-left h2 {
+  margin-bottom: 20px;
+}
+
+.checkout-left input {
+  width: 100%;
+  padding: 12px;
+  margin-bottom: 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.checkout-left input:focus {
+  outline: none;
+  border-color: #5fa8d3;
+}
+
+.save-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: #555;
+}
+
+/* RIGHT */
+.checkout-right {
+  background: #fafafa;
+  padding: 20px;
+  border-radius: 6px;
+}
+
+.checkout-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 15px;
+}
+
+.checkout-item img {
+  width: 60px;
+  height: 60px;
+  object-fit: cover;
+  border-radius: 4px;
+}
+
+.checkout-item span {
+  flex: 1;
+  font-size: 14px;
+}
+
+.checkout-row {
+  display: flex;
+  justify-content: space-between;
+  margin: 10px 0;
+  font-size: 14px;
+}
+
+.checkout-row.total {
+  font-size: 18px;
+  font-weight: bold;
+}
+
+hr {
+  border: none;
+  border-top: 1px solid #ddd;
+  margin: 15px 0;
+}
+
+/* PAYMENT */
+.payment-method label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  font-size: 14px;
+  cursor: pointer;
+}
+.checkout-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+/* CHUNG CHO 2 NÚT */
+.checkout-actions button {
+  flex: 1;
+  height: 48px;
+  font-size: 16px;
+  font-weight: 500;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+/* NÚT QUAY LẠI */
+.checkout-back {
+  background: #f5f5f5;
+  color: #333;
+  border: 1px solid #dcdcdc;
+}
+
+.checkout-back:hover {
+  background: #eaeaea;
+}
+
+/* NÚT ĐẶT HÀNG */
+.checkout-submit {
+  background: #6fb6f1;
+  color: white;
+  border: none;
+}
+
+.checkout-submit:hover {
+  background: #5aa7e6;
+}
+
+/* BUTTON */
+.checkout-submit {
+  width: 100%;
+  padding: 14px;
+  background: #6cb4ee;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.checkout-submit:hover {
+  background: #4fa3dd;
+}
+
+/* RESPONSIVE */
+@media (max-width: 900px) {
+  .checkout-container {
+    grid-template-columns: 1fr;
+  }
+}

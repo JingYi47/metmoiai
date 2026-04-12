@@ -1,0 +1,63 @@
+.pr-page {
+  min-height: 60vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 16px;
+  background: #f9fafb;
+}
+
+.pr-card {
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 4px 24px rgba(0,0,0,.10);
+  padding: 48px 40px;
+  text-align: center;
+  max-width: 480px;
+  width: 100%;
+}
+
+.pr-card.success { border-top: 5px solid #22c55e; }
+.pr-card.fail    { border-top: 5px solid #ef4444; }
+
+.pr-icon {
+  font-size: 56px;
+  margin-bottom: 16px;
+}
+
+.pr-card h2 {
+  font-size: 24px;
+  font-weight: 700;
+  margin: 0 0 12px;
+}
+
+.pr-card.success h2 { color: #16a34a; }
+.pr-card.fail h2    { color: #dc2626; }
+
+.pr-card p {
+  font-size: 15px;
+  color: #666;
+  line-height: 1.6;
+  margin-bottom: 32px;
+}
+
+.pr-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.pr-btn {
+  padding: 12px 28px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: opacity .2s;
+}
+.pr-btn:hover { opacity: .85; }
+
+.pr-btn.primary  { background: #e74c3c; color: #fff; }
+.pr-btn.secondary { background: #f3f4f6; color: #333; }

@@ -1,0 +1,65 @@
+.order-page {
+  max-width: 1200px;
+  margin: 40px auto;
+}
+
+.breadcrumb {
+  margin-bottom: 20px;
+  color: #888;
+}
+
+.order-section {
+  background: #fff;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 30px;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.shop-btn {
+  background: #2196f3;
+  color: #fff;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.order-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 15px;
+}
+
+.order-table th,
+.order-table td {
+  padding: 12px;
+  border-bottom: 1px solid #eee;
+  text-align: left;
+}
+
+.status {
+  font-weight: 500;
+}
+
+.status.pending {
+  color: #2ecc71;
+}
+
+.status.delivered {
+  color: #e74c3c;
+}
+
+.detail-btn {
+  background: #2196f3;
+  color: #fff;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+}

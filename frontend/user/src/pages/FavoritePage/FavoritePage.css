@@ -1,0 +1,62 @@
+.favorite-page {
+  width: 1200px;
+  margin: auto;
+  padding: 40px 0;
+}
+
+.favorite-header,
+.recommend-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 25px;
+}
+
+.favorite-header h2,
+.recommend-header h2 {
+  font-size: 22px;
+  font-weight: 600;
+}
+
+.view-all {
+  background: #a8d3f0;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  color: white;
+  cursor: pointer;
+}
+
+.favorite-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 25px;
+  margin-bottom: 40px;
+}
+
+.favorite-item {
+  position: relative;
+}
+
+.delete-icon {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: white;
+  border: none;
+  padding: 8px;
+  font-size: 20px;
+  border-radius: 50%;
+  cursor: pointer;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.delete-icon:hover {
+  background: #fee2e2;
+  color: #a8d3f0;
+  transform: scale(1.1);
+}
+

@@ -1,0 +1,168 @@
+/* Khung chứa toàn bộ Chatbot - Cố định ở góc phải */
+.chat-container {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  width: 350px;
+  height: 500px;
+  background-color: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 5px 25px rgba(0, 0, 0, 0.2);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  font-family: Arial, sans-serif;
+  z-index: 1000;
+}
+
+/* Thanh tiêu đề (Header) - Nền màu xanh dương đậm */
+.chat-header {
+  background-color: #1e88e5; /* Xanh dương chủ đạo đậm */
+  color: white;
+  padding: 15px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top-left-radius: 12px;
+  border-top-right-radius: 12px;
+}
+
+.chat-title {
+  font-size: 1.05rem;
+  font-weight: bold;
+}
+
+/* Nút đóng (X) */
+.close-btn {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 1.5rem;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.close-btn:hover {
+  color: #fdd835; /* Màu vàng khi hover */
+}
+
+/* Khu vực hiển thị nội dung tin nhắn */
+.chat-window {
+  flex: 1;
+  padding: 15px;
+  background-color: #f5f7fa; /* Nền xám nhạt cho cửa sổ chat */
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Cấu trúc chung cho tin nhắn */
+.message {
+  max-width: 80%;
+  padding: 10px 15px;
+  border-radius: 10px;
+  font-size: 14px;
+  line-height: 1.4;
+  word-wrap: break-word;
+}
+
+.message p {
+  margin: 0;
+}
+
+/* Tin nhắn của người dùng (bên phải) - Nền xanh dương đậm */
+.user-msg {
+  align-self: flex-end;
+  background-color: #2196f3; /* Xanh dương đậm cho tin nhắn user */
+  color: white;
+  border-bottom-right-radius: 2px; /* Tạo đuôi tin nhắn */
+}
+
+/* Tin nhắn của Bot (bên trái) - Nền xanh dương rất nhạt */
+.bot-msg {
+  align-self: flex-start;
+  background-color: #e3f2fd; /* Xanh dương rất nhạt cho tin nhắn bot */
+  color: #2c3e50;
+  border-bottom-left-radius: 2px; /* Tạo đuôi tin nhắn */
+}
+
+/* Khu vực nhập liệu (Footer) */
+.input-area {
+  display: flex;
+  padding: 12px;
+  background-color: white;
+  border-top: 1px solid #e0e0e0;
+}
+
+/* Ô nhập liệu */
+.user-input {
+  flex: 1;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  padding: 10px;
+  font-size: 14px;
+  outline: none;
+  transition: border 0.3s;
+}
+
+.user-input:focus {
+  border-color: #1e88e5; /* Màu xanh chủ đạo khi focus */
+}
+
+/* Nút gửi - Nền màu xanh dương đậm */
+.send-btn {
+  background-color: #1e88e5; /* Xanh dương đậm chủ đạo */
+  color: white;
+  border: none;
+  border-radius: 5px;
+  padding: 0 18px;
+  margin-left: 10px;
+  font-size: 14px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.send-btn:hover {
+  background-color: #1565c0; /* Xanh dương đậm hơn khi hover */
+}
+
+/* Tùy chỉnh thanh cuộn cho đẹp */
+.chat-window::-webkit-scrollbar {
+  width: 6px;
+}
+
+.chat-window::-webkit-scrollbar-thumb {
+  background-color: #c0c0c0;
+  border-radius: 10px;
+}
+
+.chat-window::-webkit-scrollbar-track {
+  background-color: #f5f7fa;
+}
+.product-suggest-card {
+  margin-top: 10px;
+  background: #fff;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #eee;
+}
+.product-suggest-card img {
+  width: 100%;
+  height: 120px;
+  object-fit: cover;
+}
+.product-info {
+  padding: 8px;
+  color: #333;
+}
+.p-name {
+  font-weight: bold;
+  font-size: 14px;
+  margin: 0;
+}
+.p-price {
+  color: #ff4d4f;
+  font-size: 13px;
+}
