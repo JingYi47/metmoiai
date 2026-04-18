@@ -6,8 +6,10 @@
 }
 
 .container {
-  width: 1200px;
+  max-width: 1200px;
   margin: auto;
+  background-color: #f8f9fa;
+  min-height: 100vh;
 }
 
 /* HEADER */
@@ -374,30 +376,86 @@ nav {
 /* ================= CATEGORIES ================= */
 .categories {
   margin-top: 40px;
+  padding: 0 40px;
 }
 
 .category-list {
-  margin-top: 20px;
+  display: flex !important;
+  gap: 25px; /* Tăng khoảng cách */
+  overflow-x: auto;
+  padding: 20px 0 30px;
   margin-bottom: 20px;
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 20px;
+  scrollbar-width: thin;
+  scrollbar-color: #ddd transparent;
+}
+
+/* Custom scrollbar mượt hơn */
+.category-list::-webkit-scrollbar {
+  height: 6px;
+}
+
+.category-list::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 10px;
+}
+
+.category-list::-webkit-scrollbar-thumb {
+  background: #ccc;
+  border-radius: 10px;
+}
+
+.category-list::-webkit-scrollbar-thumb:hover {
+  background: #bbb;
 }
 
 .category {
-  height: 160px;
-  border: 1px solid #eee;
-  border-radius: 12px;
+  min-width: 130px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
 
+.category:hover {
+  transform: translateY(-8px);
+}
+
+.category .img-wrapper {
+  width: 110px;
+  height: 110px;
+  background: #fff;
+  border: 1px solid #eee;
+  border-radius: 20px; /* Bo góc mềm mại hơn */
   display: flex;
   align-items: center;
   justify-content: center;
+  margin: 0 auto 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+  overflow: hidden;
+  transition: border-color 0.3s;
+}
+
+.category:hover .img-wrapper {
+  border-color: #3b82f6;
+  box-shadow: 0 8px 20px rgba(59, 130, 246, 0.1);
 }
 
 .category img {
-  max-width: 150px;
-  max-height: 150px;
+  max-width: 70%;
+  max-height: 70%;
   object-fit: contain;
+  transition: transform 0.3s;
+}
+
+.category:hover img {
+  transform: scale(1.1);
+}
+
+.category p {
+  font-size: 14px;
+  font-weight: 600; /* Đậm hơn */
+  color: #333;
+  margin: 0;
+  white-space: nowrap;
 }
 
 .section-header {
@@ -423,65 +481,88 @@ nav {
   grid-template-columns: repeat(4, 1fr);
   gap: 24px;
   margin: 24px 0;
+  padding: 0 40px;
 }
 
 .product-card {
   background: #fff;
-  border-radius: 12px;
-  padding: 16px;
+  border-radius: 16px;
+  padding: 20px;
   text-decoration: none;
   color: inherit;
-  display: block;
+  display: flex;
+  flex-direction: column;
+  transition: all 0.3s ease;
+  border: 1px solid #f0f0f0;
+  height: 100%;
 }
-.product-card img {
+
+.product-card:hover {
+  box-shadow: 0 10px 20px rgba(0,0,0,0.08);
+  transform: translateY(-5px);
+}
+
+.product-card .img {
   width: 100%;
   height: 180px;
+  background: #fff;
+  border-radius: 12px;
+  margin-bottom: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.product-card img {
+  max-width: 100%;
+  max-height: 100%;
   object-fit: contain;
 }
 
-.img-box {
-  background: #f5f5f5;
-  border-radius: 12px;
-  padding: 12px;
-  position: relative;
-}
-
-.img-box img {
-  width: 100%;
-}
-
-.heart,
-.cart {
-  position: absolute;
-  top: 8px;
-  background: white;
-  padding: 4px 6px;
-  border-radius: 50%;
-  font-size: 14px;
-}
-
-.heart {
-  right: 40px;
-}
-.cart {
-  right: 8px;
+.product-card h3 {
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  line-height: 1.4;
+  height: 42px;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
 }
 
 .product-card .price {
-  color: #db4444;
-  font-weight: 700;
-  font-size: 17px;
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
-.price span {
-  font-size: 14px;
+.product-card .price .current {
+  color: #333;
+  font-weight: 700;
+  font-size: 18px;
+}
+
+.product-card .price .original {
+  font-size: 13px;
   color: #999;
   text-decoration: line-through;
-  margin-left: 6px;
+  margin-left: 0;
 }
 
-.rating {
-  color: orange;
+.product-card .rating {
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #666;
+}
+
+.product-card .stars {
+  color: #ffc107;
   font-size: 14px;
 }
 

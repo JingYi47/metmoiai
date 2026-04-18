@@ -30,7 +30,7 @@ const chatHistorySchema = new mongoose.Schema(
     },
     intent: {
       type: String,
-      enum: ["product", "policy", "promotion", "shipping", "other"],
+      enum: ["product", "policy", "promotion", "shipping", "consultation", "other"],
       default: "other",
     },
     success: {

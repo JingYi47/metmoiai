@@ -25,11 +25,11 @@ router.get("/recommendations", getPersonalizedRecommendations);
 // 3. Xử lý nhắn tin với AI (Đã gộp middleware và xóa bỏ route trùng lặp)
 router.post(
   "/",
-  isAuthenticated,
-  checkMessageLength, // Kiểm tra độ dài trước
-  checkCooldown, // Kiểm tra thời gian chờ giữa 2 tin nhắn
-  checkSpam, // Kiểm tra nội dung spam
-  chat, // Sau khi qua hết "vòng gửi xe" mới vào logic chat chính
+  // isAuthenticated, 
+  checkMessageLength, 
+  checkCooldown, 
+  checkSpam, 
+  chat, 
 );
 
 // 4. Quản lý lịch sử chat

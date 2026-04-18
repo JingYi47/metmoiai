@@ -23,6 +23,7 @@ import PaymentSuccess from "../pages/PaymentResult/PaymentSuccess.jsx"
 import PaymentFail from "../pages/PaymentResult/PaymentFail.jsx"
 import SearchPage from "../pages/search/search.jsx"
 import ProductsPage from "../pages/products/products.jsx"
+import ChatFloating from "../components/ChatFloating/ChatFloating.jsx"
 function AppRouter() {
   return (
     <Router>
@@ -30,11 +31,11 @@ function AppRouter() {
         <Route path="/Login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/" element={<HomePage />} />
-        <Route path="/iphone" element={<IphonePage />} />
-        <Route path="/laptop" element={<Laptop />} />
-        <Route path="/speaker" element={<MiniSpeaker />} />
-        <Route path="/headphones" element={<Headphones />} />
-        <Route path="/ipad" element={<Ipad />} />
+        <Route path="/iphone" element={<ProductsPage defaultCategory="iphone" />} />
+        <Route path="/laptop" element={<ProductsPage defaultCategory="laptop" />} />
+        <Route path="/speaker" element={<ProductsPage defaultCategory="loa" />} />
+        <Route path="/headphones" element={<ProductsPage defaultCategory="tai-nghe" />} />
+        <Route path="/ipad" element={<ProductsPage defaultCategory="ipad" />} />
         <Route path="/cart" element={<CartPage />} />
         <Route path="/Payment" element={<Payment />} />
         <Route path="/checkout" element={<CheckoutPage />} />
@@ -54,6 +55,7 @@ function AppRouter() {
         <Route path="/search" element={<SearchPage />} />
         <Route path="/products" element={<ProductsPage />} />
       </Routes>
+      <ChatFloating />
     </Router>
   );
 }

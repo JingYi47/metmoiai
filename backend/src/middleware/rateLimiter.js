@@ -5,20 +5,20 @@ const RATE_LIMITS = {
   // Người dùng đã đăng nhập
   authenticated: {
     windowMs: 60 * 1000, // 1 phút
-    maxRequests: 10, // Tối đa 10 tin nhắn/phút
-    blockDuration: 5 * 60 * 1000, // Block 5 phút nếu spam
+    maxRequests: 30, // 🔥 Tăng lên 30 tin nhắn/phút (từ 10)
+    blockDuration: 1 * 60 * 1000, // 🔥 Giảm xuống 1 phút (từ 5)
   },
   // Khách (chưa đăng nhập)
   guest: {
     windowMs: 60 * 1000, // 1 phút
-    maxRequests: 5, // Tối đa 5 tin nhắn/phút
-    blockDuration: 10 * 60 * 1000, // Block 10 phút nếu spam
+    maxRequests: 15, // 🔥 Tăng lên 15 tin nhắn/phút (từ 5)
+    blockDuration: 2 * 60 * 1000, // 🔥 Giảm xuống 2 phút (từ 10)
   },
   // Giới hạn cứng
   hardLimit: {
     windowMs: 60 * 60 * 1000, // 1 giờ
-    maxRequests: 50, // Tối đa 50 tin nhắn/giờ
-    blockDuration: 60 * 60 * 1000, // Block 1 giờ
+    maxRequests: 200, // 🔥 Tăng lên 200 tin nhắn/giờ (từ 50)
+    blockDuration: 30 * 60 * 1000, // Block 30 phút
   },
 };
 

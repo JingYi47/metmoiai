@@ -32,17 +32,17 @@ export default function SearchPage() {
       aiApi
         .visualSearch(visualFile)
         .then((res) => {
-          const raw = res.results || [];
+          const raw = (res && res.success) ? (res.results || res.products || []) : [];
           setProducts(
             raw.map((p) => ({
-              id: p._id || p.id,
-              slug: p.slug,
-              name: p.name,
-              price: p.price,
-              originalPrice: p.originalPrice ?? p.price,
-              rating: p.rating ?? 4.5,
-              reviewCount: p.reviewCount ?? 0,
-              images: p.images?.length ? p.images : [{ url: p.thumbnail || "" }],
+              id: p?._id || p?.id,
+              slug: p?.slug,
+              name: p?.name || "Sản phẩm không tên",
+              price: p?.price || 0,
+              originalPrice: p?.originalPrice ?? (p?.discountPrice ? p?.price : Math.round((p?.price ?? 0) * 1.2)),
+              rating: p?.rating ?? 4.5,
+              reviewCount: p?.reviewCount ?? 0,
+              images: (p?.images && p.images.length > 0) ? p.images : [{ url: p?.thumbnail || "" }],
             }))
           );
         })
@@ -62,17 +62,17 @@ export default function SearchPage() {
     aiApi
       .smartSearch(q, 20)
       .then((res) => {
-        const raw = res.results || [];
+        const raw = (res && res.success) ? (res.results || res.products || []) : [];
         setProducts(
           raw.map((p) => ({
-            id: p._id,
-            slug: p.slug,
-            name: p.name,
-            price: p.price,
-            originalPrice: p.originalPrice ?? (p.discountPrice ? p.price : Math.round((p.price ?? 0) * 1.2)),
-            rating: p.avgRating ?? 4.5,
-            reviewCount: p.reviewCount ?? 0,
-            images: p.images?.length ? p.images : [{ url: p.thumbnail || "" }],
+            id: p?._id || p?.id,
+            slug: p?.slug,
+            name: p?.name || "Sản phẩm không tên",
+            price: p?.price || 0,
+            originalPrice: p?.originalPrice ?? (p?.discountPrice ? p?.price : Math.round((p?.price ?? 0) * 1.2)),
+            rating: p?.avgRating ?? 4.5,
+            reviewCount: p?.reviewCount ?? 0,
+            images: (p?.images && p.images.length > 0) ? p.images : [{ url: p?.thumbnail || "" }],
           }))
         );
       })

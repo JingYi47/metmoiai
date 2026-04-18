@@ -1,203 +1,367 @@
-import React, { useState } from "react";
-import { Badge, Button, Input, Modal, Select, Table, Tag, Form, message } from "antd";
-import { PlusOutlined, MessageOutlined } from "@ant-design/icons";
+import React, { useState, useEffect, useRef } from "react";
+import { Badge, Button, Input, Select, Table, Tag, message, Upload } from "antd";
+import { MessageOutlined, SendOutlined, PictureOutlined } from "@ant-design/icons";
+import { io, Socket } from "socket.io-client";
+import { adminChatApi, getAuthToken } from "../../../utils/apiClient";
+import { useAuthStore } from "../../../auth/auth.store";
 
 const { TextArea } = Input;
 
-type Status = "open" | "in_progress" | "resolved" | "closed";
-type Priority = "low" | "medium" | "high" | "urgent";
+// Tạo âm thanh cảnh báo (Admin)
+const NOTIFICATION_SOUND = new Audio('data:audio/wav;base64,UklGRl9vT19teleGlsbF0IEABAABAAgAIAAAABAAQAAgAAAA==');
+try {
+  const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  NOTIFICATION_SOUND.playNotification = () => {
+    try {
+      const oscillator = audioCtx.createOscillator();
+      const gainNode = audioCtx.createGain();
+      oscillator.connect(gainNode);
+      gainNode.connect(audioCtx.destination);
+      oscillator.frequency.value = 1200; // Tiếng vang cao hơn cho Admin
+      oscillator.type = 'sine';
+      gainNode.gain.setValueAtTime(0.5, audioCtx.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
+      oscillator.start(audioCtx.currentTime);
+      oscillator.stop(audioCtx.currentTime + 0.5);
+    } catch(e) { /* silent fail */ }
+  };
+} catch(e) { NOTIFICATION_SOUND.playNotification = () => {}; }
 
-interface Ticket {
-  id: string;
-  customer: string;
-  email: string;
-  subject: string;
-  category: string;
-  priority: Priority;
-  status: Status;
-  created: string;
-  lastReply: string;
-  messages: { from: string; text: string; time: string }[];
+type Status = "active" | "closed" | "pending";
+
+interface Message {
+  senderId: string;
+  senderType: "user" | "admin";
+  message: string;
+  attachments: { fileUrl: string; fileName: string }[];
+  createdAt: string;
+  isRead: boolean;
 }
 
-const MOCK_TICKETS: Ticket[] = [
-  { id: "TK-001", customer: "Cung Văn Thắng", email: "thang@gmail.com", subject: "MacBook bị lỗi màn hình sau 2 ngày", category: "Sản phẩm lỗi", priority: "urgent", status: "open", created: "03/03/2026", lastReply: "vừa xong", messages: [{ from: "Cung Văn Thắng", text: "Tôi mua MacBook Pro 14 inch M3 được 2 ngày thì màn hình bị sọc xanh. Tôi cần đổi máy ngay lập tức.", time: "10:30 03/03" }] },
-  { id: "TK-002", customer: "Nguyễn Thị Lan", email: "lan.nt@gmail.com", subject: "Chưa nhận được hoàn tiền", category: "Thanh toán", priority: "high", status: "in_progress", created: "01/03/2026", lastReply: "2 giờ trước", messages: [{ from: "Nguyễn Thị Lan", text: "Tôi đã huỷ đơn hàng #DH1770 từ 5 ngày trước nhưng chưa nhận được tiền hoàn.", time: "09:00 01/03" }, { from: "Admin", text: "Xin chào chị Lan, chúng tôi đã kiểm tra và đang tiến hành hoàn tiền trong 3-5 ngày làm việc.", time: "11:00 01/03" }] },
-  { id: "TK-003", customer: "Trần Minh Long", email: "long.tm@gmail.com", subject: "Không áp dụng được mã giảm giá", category: "Tài khoản", priority: "medium", status: "resolved", created: "28/02/2026", lastReply: "1 ngày trước", messages: [{ from: "Trần Minh Long", text: "Mã PANDORA20 báo lỗi khi tôi cố áp dụng cho đơn 500k.", time: "14:00 28/02" }, { from: "Admin", text: "Mã PANDORA20 yêu cầu đơn hàng tối thiểu 1.000.000đ. Anh vui lòng kiểm tra lại nhé.", time: "15:30 28/02" }, { from: "Trần Minh Long", text: "À hiểu rồi, cảm ơn admin!", time: "16:00 28/02" }] },
-  { id: "TK-004", customer: "Phạm Thu Hà", email: "ha.pt@gmail.com", subject: "Muốn hỏi về chính sách bảo hành", category: "Bảo hành", priority: "low", status: "closed", created: "25/02/2026", lastReply: "5 ngày trước", messages: [{ from: "Phạm Thu Hà", text: "iPhone 15 của tôi mua cách đây 8 tháng, bảo hành còn không?", time: "09:00 25/02" }, { from: "Admin", text: "iPhone mua tại Pandora Pro được bảo hành 12 tháng chính hãng. Máy của bạn còn 4 tháng bảo hành.", time: "10:00 25/02" }] },
-  { id: "TK-005", customer: "Lê Quang Huy", email: "huy.lq@gmail.com", subject: "Đơn hàng bị delay 10 ngày", category: "Vận chuyển", priority: "high", status: "in_progress", created: "02/03/2026", lastReply: "3 giờ trước", messages: [{ from: "Lê Quang Huy", text: "Đơn hàng iPad Pro M4 của tôi đã hơn 10 ngày mà chưa nhận được, tracking không cập nhật.", time: "08:00 02/03" }] },
-];
+interface Conversation {
+  _id: string;
+  conversationId: string;
+  userId: { _id: string; name: string; email: string; avatar?: string };
+  messages: Message[];
+  status: Status;
+  unreadCount: { admin: number; user: number };
+  lastMessageAt: string;
+}
+
+const SOCKET_URL = "http://localhost:8000/chat-admin";
 
 const STATUS_META: Record<Status, { label: string; color: string }> = {
-  open:        { label: "Mở",          color: "blue"    },
-  in_progress: { label: "Đang xử lý", color: "orange"  },
-  resolved:    { label: "Đã giải quyết", color: "green" },
-  closed:      { label: "Đóng",        color: "default" },
-};
-
-const PRIORITY_META: Record<Priority, { label: string; color: string }> = {
-  urgent: { label: "Khẩn cấp", color: "red"    },
-  high:   { label: "Cao",      color: "orange" },
-  medium: { label: "Vừa",      color: "blue"   },
-  low:    { label: "Thấp",     color: "default" },
+  active:  { label: "Đang hoạt động", color: "green" },
+  pending: { label: "Chờ xử lý",      color: "orange" },
+  closed:  { label: "Đã đóng",       color: "default" },
 };
 
 export default function Support() {
-  const [tickets, setTickets] = useState<Ticket[]>(MOCK_TICKETS);
-  const [selected, setSelected] = useState<Ticket | null>(null);
+  const { user } = useAuthStore();
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [selected, setSelected] = useState<Conversation | null>(null);
   const [reply, setReply] = useState("");
   const [filterStatus, setFilterStatus] = useState<Status | "all">("all");
+  const [loading, setLoading] = useState(false);
+  const socketRef = useRef<Socket | null>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const visible = filterStatus === "all" ? tickets : tickets.filter((t) => t.status === filterStatus);
-  const openCount = tickets.filter((t) => t.status === "open").length;
-  const inProgressCount = tickets.filter((t) => t.status === "in_progress").length;
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
 
-  const sendReply = () => {
-    if (!reply.trim() || !selected) return;
-    const now = new Date().toLocaleString("vi-VN");
-    const newMsg = { from: "Admin", text: reply.trim(), time: now };
-    setTickets((prev) => prev.map((t) =>
-      t.id === selected.id
-        ? { ...t, messages: [...t.messages, newMsg], lastReply: "vừa xong", status: "in_progress" as Status }
-        : t
-    ));
-    setSelected((prev) => prev ? { ...prev, messages: [...prev.messages, newMsg], status: "in_progress" } : null);
+  useEffect(() => {
+    fetchConversations();
+
+    const token = getAuthToken();
+    socketRef.current = io(SOCKET_URL, {
+      auth: { token },
+      transports: ["websocket"],
+    });
+
+    socketRef.current.on("new-message", (data: { conversationId: string; message: Message }) => {
+      // Báo động Admin nếu có yêu cầu hỗ trợ trực tiếp
+      if (data.message?.message?.startsWith('[Hệ thống]') && data.message?.senderType === 'user') {
+        try { NOTIFICATION_SOUND.playNotification(); } catch(e) {}
+        message.warning({
+          content: '⚠️ Có khách hàng đang yêu cầu hỗ trợ trực tiếp!',
+          duration: 5,
+          style: { fontWeight: 'bold' }
+        });
+      }
+
+      setConversations((prev) =>
+        prev.map((conv) =>
+          conv.conversationId === data.conversationId
+            ? { ...conv, messages: [...conv.messages, data.message], lastMessageAt: data.message.createdAt }
+            : conv
+        )
+      );
+
+      if (selected?.conversationId === data.conversationId) {
+        setSelected((prev) =>
+          prev ? { ...prev, messages: [...prev.messages, data.message], lastMessageAt: data.message.createdAt } : null
+        );
+        // Mark as read if user is looking at it
+        adminChatApi.markRead(data.conversationId);
+      }
+    });
+
+    socketRef.current.on("unread-update", (data: { conversationId: string; unreadCount: any }) => {
+      setConversations((prev) =>
+        prev.map((conv) =>
+          conv.conversationId === data.conversationId ? { ...conv, unreadCount: data.unreadCount } : conv
+        )
+      );
+    });
+
+    return () => {
+      socketRef.current?.disconnect();
+    };
+  }, [selected?.conversationId]);
+
+  useEffect(scrollToBottom, [selected?.messages]);
+
+  const fetchConversations = async () => {
+    setLoading(true);
+    try {
+      const res = await adminChatApi.getConversations();
+      if (res.success) {
+        setConversations(res.conversations);
+      }
+    } catch (err) {
+      message.error("Không thể tải danh sách hội thoại");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const selectConversation = (conv: Conversation) => {
+    setSelected(conv);
+    socketRef.current?.emit("join-conversation", conv.conversationId);
+    if (conv.unreadCount.admin > 0) {
+      adminChatApi.markRead(conv.conversationId);
+    }
+  };
+
+  const sendReply = async () => {
+    if (!reply.trim() || !selected || !socketRef.current || !user) return;
+
+    const messageData = {
+      conversationId: selected.conversationId,
+      message: reply.trim(),
+      senderId: user._id,
+      senderType: "admin",
+      attachments: [],
+    };
+
+    socketRef.current.emit("send-message", messageData);
     setReply("");
-    message.success("Đã gửi phản hồi");
   };
 
-  const setStatus = (id: string, status: Status) => {
-    setTickets((prev) => prev.map((t) => t.id === id ? { ...t, status } : t));
-    if (selected?.id === id) setSelected((prev) => prev ? { ...prev, status } : null);
+  const handleUpload = async (file: File) => {
+    if (!selected) return false;
+    try {
+      const res = await adminChatApi.uploadAttachment(file);
+      if (res.success) {
+        const messageData = {
+          conversationId: selected.conversationId,
+          message: `Gửi ảnh: ${res.attachment.fileName}`,
+          senderId: user?._id || "",
+          senderType: "admin",
+          attachments: [res.attachment],
+        };
+        socketRef.current?.emit("send-message", messageData);
+      }
+    } catch (err) {
+      message.error("Tải ảnh thất bại");
+    }
+    return false;
   };
+
+  const visibleConversations = filterStatus === "all" 
+    ? conversations 
+    : conversations.filter((c) => c.status === filterStatus);
 
   const columns = [
-    { title: "ID", dataIndex: "id", width: 90, render: (v: string) => <code style={{ fontSize: 12 }}>{v}</code> },
-    { title: "Khách hàng", dataIndex: "customer", render: (v: string, r: Ticket) => <><div style={{ fontWeight: 600 }}>{v}</div><div style={{ fontSize: 12, color: "#9ca3af" }}>{r.email}</div></> },
-    { title: "Chủ đề", dataIndex: "subject", ellipsis: true },
-    { title: "Danh mục", dataIndex: "category", render: (v: string) => <Tag>{v}</Tag> },
-    { title: "Ưu tiên", dataIndex: "priority", render: (v: Priority) => <Tag color={PRIORITY_META[v].color}>{PRIORITY_META[v].label}</Tag> },
-    { title: "Trạng thái", dataIndex: "status", render: (v: Status) => <Tag color={STATUS_META[v].color} style={{ borderRadius: 999 }}>{STATUS_META[v].label}</Tag> },
-    { title: "Tạo lúc", dataIndex: "created" },
+    { 
+      title: "Khách hàng", 
+      dataIndex: "userId", 
+      render: (u: any, r: Conversation) => (
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <Badge count={r.unreadCount.admin}>
+            <div style={{ width: 32, height: 32, borderRadius: "50%", background: "#e5e7eb", display: "grid", placeItems: "center", fontSize: 12, fontWeight: 700 }}>
+              {u?.name?.[0].toUpperCase() || "U"}
+            </div>
+          </Badge>
+          <div>
+            <div style={{ fontWeight: 600 }}>{u?.name || "Người dùng"}</div>
+            <div style={{ fontSize: 12, color: "#9ca3af" }}>{u?.email}</div>
+          </div>
+        </div>
+      ) 
+    },
+    { 
+      title: "Tin nhắn cuối", 
+      dataIndex: "messages", 
+      render: (msgs: Message[]) => (
+        <div style={{ fontSize: 13, color: "#6b7280", maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          {msgs[msgs.length - 1]?.message || "Chưa có tin nhắn"}
+        </div>
+      )
+    },
+    { 
+      title: "Trạng thái", 
+      dataIndex: "status", 
+      render: (v: Status) => <Tag color={STATUS_META[v].color}>{STATUS_META[v].label}</Tag> 
+    },
+    { 
+      title: "Cập nhật", 
+      dataIndex: "lastMessageAt", 
+      render: (v: string) => <span style={{ fontSize: 12, color: "#9ca3af" }}>{new Date(v).toLocaleString()}</span> 
+    },
     {
-      title: "Thao tác", key: "action",
-      render: (_: any, r: Ticket) => (
-        <Button size="small" icon={<MessageOutlined />} onClick={() => setSelected(r)}>Xem</Button>
+      title: "Thao tác", 
+      key: "action",
+      render: (_: any, r: Conversation) => (
+        <Button size="small" icon={<MessageOutlined />} onClick={() => selectConversation(r)}>Chat</Button>
       ),
     },
   ];
 
   return (
-    <div>
-      <h2 style={{ margin: "0 0 16px", fontSize: 22, fontWeight: 700 }}>Hỗ trợ khách hàng</h2>
+    <div style={{ padding: 24 }}>
+      <h2 style={{ margin: "0 0 24px", fontSize: 24, fontWeight: 700 }}>Hỗ trợ khách hàng</h2>
 
-      {/* Stats */}
-      <div style={{ display: "flex", gap: 12, marginBottom: 20, flexWrap: "wrap" }}>
-        {[
-          { label: "Ticket mở", value: openCount, color: "#3b82f6", bg: "#eff6ff" },
-          { label: "Đang xử lý", value: inProgressCount, color: "#f59e0b", bg: "#fff7ed" },
-          { label: "Đã giải quyết", value: tickets.filter((t) => t.status === "resolved").length, color: "#10b981", bg: "#f0fdf4" },
-          { label: "Tổng ticket", value: tickets.length, color: "#6b7280", bg: "#f9fafb" },
-        ].map((s) => (
-          <div key={s.label} style={{ padding: "14px 20px", background: s.bg, borderRadius: 12, minWidth: 140, border: `1px solid ${s.bg}` }}>
-            <div style={{ fontSize: 24, fontWeight: 800, color: s.color }}>{s.value}</div>
-            <div style={{ fontSize: 13, color: "#6b7280" }}>{s.label}</div>
+      <div style={{ display: "flex", gap: 24, minHeight: 600 }}>
+        {/* List Sidebar */}
+        <div className="card" style={{ width: 400, padding: 0, overflow: "hidden", display: "flex", flexDirection: "column" }}>
+          <div style={{ padding: 16, borderBottom: "1px solid #f3f4f6" }}>
+            <Select defaultValue="all" style={{ width: "100%" }} onChange={(v: any) => setFilterStatus(v)}>
+              <Select.Option value="all">Tất cả hội thoại</Select.Option>
+              <Select.Option value="active">Đang hoạt động</Select.Option>
+              <Select.Option value="pending">Chờ xử lý</Select.Option>
+              <Select.Option value="closed">Đã đóng</Select.Option>
+            </Select>
           </div>
-        ))}
-      </div>
+          <div style={{ flex: 1, overflowY: "auto" }}>
+            <Table
+              columns={columns}
+              dataSource={visibleConversations.map(c => ({ ...c, key: c._id }))}
+              pagination={false}
+              showHeader={false}
+              loading={loading}
+              onRow={(r) => ({
+                onClick: () => selectConversation(r as Conversation),
+                style: { cursor: "pointer", background: selected?._id === r._id ? "#eff6ff" : "" }
+              })}
+            />
+          </div>
+        </div>
 
-      {/* Filter */}
-      <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
-        {(["all", "open", "in_progress", "resolved", "closed"] as const).map((f) => (
-          <Button
-            key={f}
-            size="small"
-            type={filterStatus === f ? "primary" : "default"}
-            onClick={() => setFilterStatus(f)}
-            style={{ borderRadius: 20 }}
-          >
-            {f === "all" ? "Tất cả" : STATUS_META[f].label}
-            {f === "open" && openCount > 0 && <Badge count={openCount} size="small" style={{ marginLeft: 4, background: "#ef4444" }} />}
-          </Button>
-        ))}
-      </div>
-
-      <div className="card table-card" style={{ marginBottom: selected ? 18 : 0 }}>
-        <Table
-          columns={columns}
-          dataSource={visible.map((t) => ({ ...t, key: t.id }))}
-          pagination={{ pageSize: 6, position: ["bottomCenter"] }}
-          size="small"
-          onRow={(r) => ({ onClick: () => setSelected(r as Ticket), style: { cursor: "pointer", background: selected?.id === r.id ? "#eff6ff" : "" } })}
-        />
-      </div>
-
-      {/* Ticket detail modal */}
-      {selected && (
-        <div className="card card-pad">
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16, paddingBottom: 14, borderBottom: "1px solid #f3f4f6" }}>
-            <div>
-              <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 4 }}>
-                <code style={{ fontSize: 12, color: "#6b7280" }}>{selected.id}</code>
-                <Tag color={PRIORITY_META[selected.priority].color}>{PRIORITY_META[selected.priority].label}</Tag>
-                <Tag color={STATUS_META[selected.status].color} style={{ borderRadius: 999 }}>{STATUS_META[selected.status].label}</Tag>
+        {/* Chat Window */}
+        <div className="card" style={{ flex: 1, display: "flex", flexDirection: "column", padding: 0, border: "1px solid #e5e7eb", borderRadius: 12, overflow: "hidden", boxShadow: "0 4px 12px rgba(0,0,0,0.05)" }}>
+          {selected ? (
+            <>
+              <div style={{ padding: "12px 24px", borderBottom: "1px solid #f3f4f6", display: "flex", justifyContent: "space-between", alignItems: "center", background: "#0076ff", color: "white" }}>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "white" }}>{selected.userId?.name} <span style={{ fontWeight: 400, fontSize: 12, opacity: 0.8 }}>(Khách hàng trực tuyến)</span></h3>
+                  <span style={{ fontSize: 12, opacity: 0.9 }}>{selected.userId?.email}</span>
+                </div>
+                <Tag color={STATUS_META[selected.status].color} style={{ borderRadius: 12 }}>{STATUS_META[selected.status].label}</Tag>
               </div>
-              <h3 style={{ margin: "0 0 4px", fontSize: 16 }}>{selected.subject}</h3>
-              <span style={{ fontSize: 13, color: "#6b7280" }}>{selected.customer} · {selected.email}</span>
-            </div>
-            <div style={{ display: "flex", gap: 8 }}>
-              <Select value={selected.status} size="small" style={{ width: 150 }} onChange={(v) => setStatus(selected.id, v)}>
-                <Select.Option value="open">Mở</Select.Option>
-                <Select.Option value="in_progress">Đang xử lý</Select.Option>
-                <Select.Option value="resolved">Đã giải quyết</Select.Option>
-                <Select.Option value="closed">Đóng</Select.Option>
-              </Select>
-              <Button size="small" onClick={() => setSelected(null)}>Thu gọn ✕</Button>
-            </div>
-          </div>
 
-          {/* Messages */}
-          <div style={{ maxHeight: 260, overflowY: "auto", marginBottom: 16 }}>
-            {selected.messages.map((m, i) => (
-              <div key={i} style={{
-                display: "flex", flexDirection: m.from === "Admin" ? "row-reverse" : "row",
-                gap: 10, marginBottom: 12,
-              }}>
-                <div style={{
-                  width: 32, height: 32, borderRadius: 999, flexShrink: 0, display: "grid", placeItems: "center", fontSize: 12, fontWeight: 700,
-                  background: m.from === "Admin" ? "#3b82f6" : "#e5e7eb",
-                  color: m.from === "Admin" ? "#fff" : "#374151",
+              <div style={{ flex: 1, padding: 24, overflowY: "auto", display: "flex", flexDirection: "column", gap: 16, background: "#eef2f7" }}>
+                {selected.messages.map((m, i) => (
+                  <div key={i} style={{ display: "flex", flexDirection: m.senderType === "admin" ? "row-reverse" : "row", gap: 12, alignItems: "flex-end" }}>
+                    {m.senderType !== "admin" && (
+                       <div style={{ width: 32, height: 32, borderRadius: "50%", background: "white", display: "grid", placeItems: "center", fontSize: 12, fontWeight: 700, border: "1px solid #ddd" }}>
+                        {selected.userId?.name?.[0].toUpperCase() || "U"}
+                      </div>
+                    )}
+                    <div style={{
+                      maxWidth: "70%", padding: "10px 16px", borderRadius: m.senderType === "admin" ? "12px 12px 0 12px" : "12px 12px 12px 0",
+                      background: m.senderType === "admin" ? "#0076ff" : "white",
+                      color: m.senderType === "admin" ? "white" : "#333",
+                      boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
+                      border: m.senderType === "admin" ? "none" : "1px solid #e2e8f0"
+                    }}>
+                      {m.attachments?.map((att, idx) => (
+                        <img key={idx} src={att.fileUrl} alt="attachment" style={{ maxWidth: "100%", borderRadius: 8, marginBottom: 8 }} />
+                      ))}
+                      <p style={{ margin: 0, fontSize: 14, lineHeight: 1.5 }}>{m.message}</p>
+                      
+                      {/* AI PRODUCT CARDS IN ADMIN VIEW */}
+                      {m.products && m.products.length > 0 && (
+                        <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 8 }}>
+                          {m.products.map((p: any, idx: number) => (
+                            <div key={idx} style={{ display: "flex", gap: 10, background: "#f8fafc", padding: 8, borderRadius: 6, border: "1px solid #e2e8f0" }}>
+                              <img src={p.images?.[0]?.url || 'https://via.placeholder.com/150'} alt={p.name} style={{ width: 40, height: 40, objectFit: "cover", borderRadius: 4 }} />
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{ fontSize: 12, fontWeight: 600, color: "#333", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{p.name}</div>
+                                <div style={{ fontSize: 11, color: "#ff4d4f" }}>{p.price?.toLocaleString()}đ</div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      <span style={{ fontSize: 10, opacity: 0.7, marginTop: 4, display: "block", textAlign: m.senderType === "admin" ? "right" : "left" }}>
+                        {new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+                <div ref={messagesEndRef} />
+              </div>
+
+              <div style={{ padding: "16px 20px", borderTop: "1px solid #f3f4f6", background: "#fff" }}>
+                <div style={{ 
+                  display: "flex", 
+                  gap: 12, 
+                  alignItems: "flex-end", 
+                  background: "#f5f5f5", 
+                  padding: "8px 12px", 
+                  borderRadius: 16,
+                  border: "1px solid #e5e7eb"
                 }}>
-                  {m.from === "Admin" ? "A" : m.from[0]}
-                </div>
-                <div style={{ maxWidth: "72%" }}>
-                  <div style={{
-                    padding: "10px 14px", borderRadius: 12,
-                    background: m.from === "Admin" ? "#eff6ff" : "#f9fafb",
-                    fontSize: 14, lineHeight: 1.6,
-                  }}>{m.text}</div>
-                  <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 4, textAlign: m.from === "Admin" ? "right" : "left" }}>{m.from} · {m.time}</div>
+                  <Upload beforeUpload={handleUpload} showUploadList={false}>
+                    <Button type="text" icon={<PictureOutlined style={{ fontSize: 20, color: "#666" }} />} />
+                  </Upload>
+                  <TextArea
+                    rows={2}
+                    placeholder="Nhập nội dung phản hồi..."
+                    variant="borderless"
+                    value={reply}
+                    onChange={(e) => setReply(e.target.value)}
+                    onPressEnter={(e) => { if (!e.shiftKey) { e.preventDefault(); sendReply(); } }}
+                    style={{ background: "transparent", padding: "8px 0" }}
+                  />
+                  <Button 
+                    type="primary" 
+                    onClick={sendReply} 
+                    style={{ 
+                      height: 40, 
+                      borderRadius: 20, 
+                      background: "#0076ff",
+                      fontWeight: 600,
+                      padding: "0 24px"
+                    }}
+                    disabled={!reply.trim()}
+                  >
+                    Gửi cho
+                  </Button>
                 </div>
               </div>
-            ))}
-          </div>
-
-          {/* Reply box */}
-          {selected.status !== "closed" && (
-            <div style={{ display: "flex", gap: 10 }}>
-              <TextArea
-                rows={2}
-                placeholder="Nhập phản hồi..."
-                value={reply}
-                onChange={(e) => setReply(e.target.value)}
-                onPressEnter={(e) => { if (!e.shiftKey) { e.preventDefault(); sendReply(); } }}
-                style={{ flex: 1, borderRadius: 8 }}
-              />
-              <Button type="primary" onClick={sendReply} style={{ height: "auto" }}>Gửi</Button>
+            </>
+          ) : (
+            <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", color: "#9ca3af", background: "#f9fafb" }}>
+              <MessageOutlined style={{ fontSize: 48, marginBottom: 16, opacity: 0.3 }} />
+              <p>Chọn một hội thoại hoặc tìm kiếm khách hàng để hỗ trợ</p>
             </div>
           )}
         </div>
-      )}
+      </div>
     </div>
   );
 }

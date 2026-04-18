@@ -4,6 +4,7 @@ import { AiOutlineHeart } from "react-icons/ai";
 import { FiShoppingCart, FiUser, FiSearch, FiCamera } from "react-icons/fi";
 import { useAuth } from "../context/AuthContext";
 import { aiApi } from "../services/api";
+import { categoryApi } from "../services/api";
 import "./Header.css";
 
 export default function Header() {
@@ -18,16 +19,27 @@ export default function Header() {
   const fileInputRef = useRef(null);
   const suggestionCache = useRef({}); // Cache for instant results
 
+  const [categories, setCategories] = useState([]);
   const navigate = useNavigate();
   const { user, logout } = useAuth();
 
   useEffect(() => {
-    // Load trending searches on mount
-    aiApi.getTrendingSearches().then(res => {
-      if (res.success) setTrending(res.trending || []);
-    });
-  }, []);
+    const fetchCategories = async () => {
+      try {
+        const res = await categoryApi.getAll();
 
+        console.log("HEADER CATEGORY:", res); // 👈 check
+
+        setCategories(
+          Array.isArray(res) ? res : res.data || res.categories || [],
+        );
+      } catch (error) {
+        console.error("Lỗi API Categories:", error);
+      }
+    };
+
+    fetchCategories();
+  }, []);
   const handleLogout = async () => {
     await logout();
     navigate("/Login");
@@ -52,14 +64,14 @@ export default function Header() {
   const handleImageSearch = (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    
+
     // Chuyển hướng sang trang search với flag tìm bằng hình ảnh
     // Chúng ta truyền file qua state của React Router
-    navigate("/search", { 
-      state: { 
+    navigate("/search", {
+      state: {
         visualFile: file,
-        visualSearchMode: true 
-      } 
+        visualSearchMode: true,
+      },
     });
   };
 
@@ -80,10 +92,10 @@ export default function Header() {
     }
 
     const timer = setTimeout(async () => {
-      if (q.length >= 1) { 
+      if (q.length >= 1) {
         setIsSearching(true);
         try {
-          const res = await aiApi.smartSearch(q, 10); 
+          const res = await aiApi.smartSearch(q, 10);
           if (res.success) {
             const results = res.results || [];
             setSuggestions(results);
@@ -141,26 +153,29 @@ export default function Header() {
           </div>
 
           {/* DROPDOWN SẢN PHẨM */}
-          <div className="menu-item dropdown-parent">
-            <span onClick={() => setOpenProduct(!openProduct)}>Sản Phẩm</span>
-            <button
-              className="dropdown-btn"
+          <div className="menu-item product-menu">
+            <div
+              className="menu-title"
               onClick={() => setOpenProduct(!openProduct)}
             >
-              <span>▼</span>
-            </button>
+              <span>Sản phẩm</span>
+              <span className={`arrow ${openProduct ? "rotate" : ""}`}>▼</span>
+            </div>
 
             {openProduct && (
               <div className="dropdown">
-                <p onClick={() => goTo("/iphone")}>iPhone</p>
-                <p onClick={() => goTo("/laptop")}>Laptop</p>
-                <p onClick={() => goTo("/speaker")}>Mini Speakers</p>
-                <p onClick={() => goTo("/headphones")}>Headphones</p>
-                <p onClick={() => goTo("/ipad")}>iPad</p>
+                {categories.map((cat) => (
+                  <div
+                    key={cat._id}
+                    className="dropdown-item"
+                    onClick={() => goTo(`/products?category=${cat.slug}`)}
+                  >
+                    {cat.name}
+                  </div>
+                ))}
               </div>
             )}
           </div>
-
           <div className="menu-item">
             <span>Liên hệ</span>
           </div>
@@ -168,7 +183,6 @@ export default function Header() {
 
         {/* ACTIONS */}
         <div className="header-actions">
-
           {/* SMART SEARCH */}
           {/* SMART SEARCH REDESIGNED */}
           <div className="search-container" ref={searchContainerRef}>
@@ -265,7 +279,6 @@ export default function Header() {
             )}
           </div>
 
-
           {/* ICONS */}
           <div
             className="favorite-icon"
@@ -302,9 +315,23 @@ export default function Header() {
 
               {openUser && (
                 <div className="user-menu">
-                  <div onClick={() => goTo("/profile")}><span>Thông tin tài khoản</span></div>
-                  <div onClick={() => goTo("/order")}><span>Đơn hàng của tôi</span></div>
-                  <div><span>Đánh giá</span></div>
+                  <div onClick={() => goTo("/profile")}>
+                    <span>Thông tin tài khoản</span>
+                  </div>
+                  <div onClick={() => goTo("/order")}>
+                    <span>Đơn hàng của tôi</span>
+                  </div>
+                  <div
+                    onClick={() => {
+                      window.dispatchEvent(new CustomEvent("open-chat"));
+                      setOpenUser(false);
+                    }}
+                  >
+                    <span>Liên hệ hỗ trợ</span>
+                  </div>
+                  <div>
+                    <span>Đánh giá</span>
+                  </div>
                   <div className="logout" onClick={handleLogout}>
                     <span>Đăng xuất</span>
                   </div>

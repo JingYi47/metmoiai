@@ -173,3 +173,23 @@ export const adminReviewApi = {
   },
   delete: (id: string) => request<any>(`/reviews/${id}`, { method: "DELETE" }),
 };
+
+// ── CHAT ──────────────────────────────────────────────────
+export const adminChatApi = {
+  getConversations: () => request<any>("/chat-admin/conversations"),
+  getHistory: () => request<any>("/chat-admin/history"),
+  uploadAttachment: (file: File) => {
+    const fd = new FormData();
+    fd.append("file", file);
+    return fetch(`${BASE}/chat-admin/upload`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${getAuthToken() ?? ""}` },
+      body: fd,
+    }).then((r) => r.json());
+  },
+  markRead: (conversationId: string) =>
+    request<any>(`/chat-admin/mark-read/${conversationId}`, { 
+      method: "POST", 
+      body: JSON.stringify({ userRole: "admin" }) 
+    }),
+};

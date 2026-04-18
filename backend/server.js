@@ -1,7 +1,10 @@
-import express from "express";
 import dotenv from "dotenv";
+dotenv.config();
+import express from "express";
 import cors from "cors";
 import path from "path";
+import { createServer } from "http";
+import { Server } from "socket.io";
 import connectDB from "./src/database/db.js";
 import userRoute from "./src/routes/userRoute.js";
 import adminUserRoutes from "./src/routes/adminUserRoute.js";
@@ -18,8 +21,8 @@ import chatRoutes from "./src/routes/chatRoutes.js";
 import recommendRoutes from "./src/routes/recommendRoutes.js";
 import chatHistoryRoutes from "./src/routes/chatHistoryRoutes.js";
 import aiRoutes from "./src/routes/aiRoutes.js";
-// import chatAdminRoutes from "./src/routes/chatAdminRoutes.js";
-// import { setupChatAdminSocket } from "./src/socket/chatAdminSocket.js";
+import chatAdminRoutes from "./src/routes/chatAdminRoutes.js";
+import { setupChatAdminSocket } from "./src/socket/chatAdminSocket.js";
 import "./src/models/userModel.js";
 import "./src/models/productModel.js";
 import "./src/models/categoryModel.js";
@@ -31,12 +34,18 @@ import "./src/models/view.model.js";
 import "./src/models/searchModel.js";
 import "./src/models/behaviorModel.js";
 import "./src/models/reviewModel.js";
-// import { Server } from "socket.io";
-// const io = new Server(server);
-// setupChatAdminSocket(io);
-dotenv.config();
 
 const app = express();
+const server = createServer(app);
+const io = new Server(server, {
+  cors: {
+    origin: "*",
+    methods: ["GET", "POST"],
+  },
+});
+
+setupChatAdminSocket(io);
+
 const PORT = process.env.PORT || 3000;
 // middleware
 app.use(cors());
@@ -57,13 +66,13 @@ app.use("/api/v1/payment", paymentRoutes);
 app.use("/api/v1/behavior", behaviorRoutes);
 app.use("/api/v1/chat", chatRoutes);
 app.use("/api/v1/recommend-ai", recommendRoutes);
-app.use("/api/v1/chat", chatHistoryRoutes);
+app.use("/api/v1/chat-history", chatHistoryRoutes);
 app.use("/api/v1/ai", aiRoutes);
-// app.use("/api/v1chat", chatAdminRoutes);
+app.use("/api/v1/chat-admin", chatAdminRoutes);
 // http://localhost:8000/api/v1/user/register
 
 connectDB();
 
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   console.log(`Server is listening at port:${PORT}`);
 });

@@ -120,7 +120,7 @@ export default function HomePage() {
 
             {featured.length > 0 && (
               <ProductSection
-                title="Sản phẩm nổi bật"
+                title="Gợi ý cho bạn"
                 products={featured.map(normalize)}
                 viewAllPath="/products?type=featured"
               />

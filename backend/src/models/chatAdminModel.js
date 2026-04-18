@@ -7,6 +7,7 @@ const chatAdminSchema = new mongoose.Schema(
       type: String,
       required: true,
       unique: true,
+      default: () => `CHAT-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
     },
     userId: {
       type: mongoose.Schema.Types.ObjectId,
@@ -50,6 +51,20 @@ const chatAdminSchema = new mongoose.Schema(
             fileSize: Number,
           },
         ],
+        // Thêm trường products để lưu gợi ý từ AI
+        products: [
+          {
+            name: String,
+            slug: String,
+            price: Number,
+            images: [
+              {
+                url: String,
+                public_id: String,
+              },
+            ],
+          },
+        ],
         createdAt: {
           type: Date,
           default: Date.now,
@@ -91,13 +106,6 @@ const chatAdminSchema = new mongoose.Schema(
   },
 );
 
-// Tạo conversationId tự động
-chatAdminSchema.pre("save", function (next) {
-  if (!this.conversationId) {
-    this.conversationId = `CHAT-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-  }
-  next();
-});
 
 const ChatAdmin = mongoose.model("ChatAdmin", chatAdminSchema);
 export default ChatAdmin;

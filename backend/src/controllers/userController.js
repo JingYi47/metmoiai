@@ -798,6 +798,8 @@ export const loginWithGoogle = async (req, res) => {
         .map((s) => s.trim())
         .filter(Boolean),
     ].filter(Boolean);
+    console.log("DEBUG: Allowed Audiences:", allowedAudiences);
+    console.log("DEBUG: Payload idToken starts with:", idToken?.substring(0, 20));
 
     if (!allowedAudiences.length) {
       return res.status(500).json({

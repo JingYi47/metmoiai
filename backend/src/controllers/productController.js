@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import Product from "../models/productModel.js";
 import { uploadImage, deleteImage } from "../utils/cloudinary.js";
 import { slugify } from "../utils/helpers.js";
@@ -114,6 +115,11 @@ export const listProducts = async (req, res) => {
 //  lấy sp theo id
 export const getProductById = async (req, res) => {
   try {
+    // 🔥 Kiểm tra ID hợp lệ để tránh lỗi 500 khi người dùng gửi slug thay vì ID
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(404).json({ success: false, message: "Invalid Product ID format" });
+    }
+
     const product = await Product.findById(req.params.id);
     if (!product || !product.isActive) {
       return res
@@ -755,6 +761,7 @@ export const aiSearchProducts = async (req, res) => {
 
       return res.json({
         success: true,
+        results: result.results, // Thêm results cho đồng bộ Frontend
         products: result.results,
         total: result.results.length,
         source: result.source,

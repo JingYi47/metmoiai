@@ -40,7 +40,9 @@
 .search-box:focus-within {
   background: #fff;
   border-color: var(--primary);
-  box-shadow: 0 0 0 4px var(--primary-glow), var(--shadow-md);
+  box-shadow:
+    0 0 0 4px var(--primary-glow),
+    var(--shadow-md);
   transform: translateY(-1px);
 }
 
@@ -124,8 +126,14 @@
 }
 
 @keyframes dropdownFade {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .suggestion-container {
@@ -227,8 +235,12 @@
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 /* Adjustments for non-search Header elements */
@@ -238,13 +250,191 @@
   gap: 20px;
 }
 
-.favorite-icon, .cart-icon {
+.favorite-icon,
+.cart-icon {
   font-size: 22px;
   color: var(--text-main);
   transition: all 0.2s ease;
 }
 
-.favorite-icon:hover, .cart-icon:hover {
+.favorite-icon:hover,
+.cart-icon:hover {
   color: var(--primary);
   transform: scale(1.1);
+}
+/* ===== MENU PRODUCT ===== */
+.product-menu {
+  position: relative;
+}
+
+/* title + arrow */
+.menu-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+/* arrow */
+.arrow {
+  font-size: 12px;
+  transition: transform 0.3s ease;
+}
+
+.arrow.rotate {
+  transform: rotate(180deg);
+}
+
+/* ===== DROPDOWN ===== */
+.dropdown {
+  position: absolute;
+  top: 110%;
+  left: 0;
+  background: #fff;
+  padding: 8px 0;
+  display: flex;
+  flex-direction: column;
+  min-width: 180px;
+  border-radius: 10px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+  z-index: 999;
+
+  animation: fadeDown 0.25s ease;
+}
+
+/* item */
+.dropdown-item {
+  padding: 10px 16px;
+  cursor: pointer;
+  font-size: 14px;
+  font-family: "Poppins", "Segoe UI", sans-serif;
+  color: #333;
+  transition: all 0.2s ease;
+}
+
+/* hover */
+.dropdown-item:hover {
+  background: #f0f7ff;
+  color: #007bff;
+  padding-left: 20px;
+  border-left: 3px solid #007bff;
+}
+
+/* cách dòng */
+.dropdown-item:not(:last-child) {
+  margin-bottom: 4px;
+}
+
+/* empty */
+.dropdown-empty {
+  padding: 10px 16px;
+  font-size: 14px;
+  color: #888;
+}
+
+/* animation */
+@keyframes fadeDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+/* AUTH & USER DROPDOWN */
+.user-dropdown {
+  position: relative;
+}
+
+.user-avatar {
+  background: var(--bg-input);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  padding: 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  color: var(--text-main);
+}
+
+.user-avatar:hover {
+  background: #fff;
+  border-color: var(--primary);
+  color: var(--primary);
+  box-shadow: var(--shadow-sm);
+}
+
+.user-icon {
+  font-size: 20px;
+}
+
+.user-menu {
+  position: absolute;
+  top: calc(100% + 12px);
+  right: 0;
+  width: 220px;
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  box-shadow: var(--shadow-md);
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  z-index: 1000;
+  animation: dropdownFade 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
+}
+
+.user-menu div {
+  padding: 10px 16px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-main);
+  transition: all 0.2s ease;
+}
+
+.user-menu div:hover {
+  background: rgba(0, 123, 255, 0.08);
+  color: var(--primary);
+}
+
+.user-menu .logout {
+  color: #df4759;
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
+  margin-top: 4px;
+  padding-top: 12px;
+  border-radius: 0 0 10px 10px;
+}
+
+.user-menu .logout:hover {
+  background: #fff5f5;
+  color: #df4759;
+}
+
+.header-login-btn {
+  background: linear-gradient(135deg, #007bff, #0056b3);
+  color: white;
+  border: none;
+  padding: 10px 24px;
+  border-radius: 100px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(0, 123, 255, 0.2);
+}
+
+.header-login-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 123, 255, 0.3);
 }

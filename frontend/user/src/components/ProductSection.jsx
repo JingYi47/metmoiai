@@ -7,8 +7,8 @@ export default function ProductSection({ title, products, showHeader = true, vie
   return (
     <section className="product-section">
       {showHeader && (
-        <div className="section-header">
-          <h2>{title}</h2>
+        <div className="section-header" style={{ marginBottom: "24px", padding: "0 40px" }}>
+          <h2 style={{ fontSize: "1.8rem", fontWeight: "700", color: "#333" }}>{title}</h2>
           {viewAllPath ? (
             <button className="view-all" onClick={() => navigate(viewAllPath)}>
               Xem tất cả

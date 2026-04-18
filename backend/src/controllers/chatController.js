@@ -1,6 +1,7 @@
 import Product from "../models/productModel.js";
 import Behavior from "../models/behaviorModel.js";
 import ChatHistory from "../models/chatHistoryModel.js";
+import ChatAdmin from "../models/chatAdminModel.js";
 import axios from "axios";
 
 // ==========================================
@@ -33,8 +34,10 @@ const trackBehavior = async (req, action, productId = null, keyword = null) => {
 // ==========================================
 export const chat = async (req, res) => {
   try {
-    console.log("\n--- CHAT SESSION STARTED ---");
-    const { message } = req.body;
+    console.log("\n>>> NEW AI CHAT REQUEST RECEIVED <<<");
+    const { message, contextProductId } = req.body;
+    console.log("Message:", message);
+    console.log("ContextProductID:", contextProductId);
     // Lấy sessionId cực kỳ quan trọng để gửi sang Python
     const sessionId =
       req.headers["x-session-id"] || req.sessionID || "guest_default";
@@ -45,36 +48,134 @@ export const chat = async (req, res) => {
     // BƯỚC 1: Track hành vi
     await trackBehavior(req, "search", null, message);
 
-    // BƯỚC 2: Lấy sản phẩm gửi cho AI
-    let rawProducts = await Product.find({ isActive: true }).lean();
+    // BƯỚC 2: Lấy sản phẩm liên quan bằng Hybrid Search (AI + DB)
+    // Sử dụng logic tương tự smartSearch ở aiController để có độ chính xác cao nhất
+    let rawProducts = [];
+    let contextProduct = null;
+
+    // 1. Lấy context sản phẩm trước đó (nếu có contextProductId hoặc từ lịch sử)
+    if (contextProductId) {
+      contextProduct = await Product.findOne({ 
+        $or: [{ slug: contextProductId }, { _id: (contextProductId.length === 24 ? contextProductId : undefined) }]
+      }).lean();
+    }
+    
+    const msgLower = message.toLowerCase();
+    const isAskingAboutContext = /này|đó|kia|thế nào|cấu hình|bảo hành|máy|chi tiết|sản phẩm/.test(msgLower);
+
+    if (!contextProduct && isAskingAboutContext) {
+      const lastHistory = await ChatHistory.findOne({ 
+        sessionId: sessionId, 
+        productId: { $ne: null } 
+      }).sort({ createdAt: -1 }).lean();
+
+      if (lastHistory && lastHistory.productId) {
+        contextProduct = await Product.findById(lastHistory.productId).lean();
+      }
+    }
+
+    // 2. Gọi AI Smart Service để lấy top sản phẩm liên quan nhất theo ngữ nghĩa
+    // 🔥 Nếu có ngữ cảnh sản phẩm VÀ câu hỏi liên quan đến sản phẩm đó, KHÔNG cần tìm kiếm thêm
+    const isContextualQuestion = contextProduct && /này|đó|kia|thế nào|cấu hình|bảo hành|màu|chi tiết|giá|pin|camera|màn hình|chip|ram|rom|bộ nhớ|trọng lượng/.test(msgLower);
+
+    if (isContextualQuestion) {
+      // Chỉ gửi đúnh 1 sản phẩm đang hỏi, bức AI trả lời chính xác
+      rawProducts = [contextProduct];
+      console.log(`🔒 Contextual question detected - lốck vào sản phẩm: "${contextProduct.name}"`);
+    } else {
+    try {
+      // Tối ưu hóa truy vấn bằng cách thêm từ đồng nghĩa (Synonyms)
+      let expandedQuery = message;
+      const lowerMsg = message.toLowerCase();
+      
+      const synonymMap = {
+        "máy tính": "laptop, macbook, pc, máy tính xách tay, notebook, workstation",
+        "laptop": "máy tính xách tay, notebook, máy tính",
+        "điện thoại": "iphone, samsung, smartphone, di động, mobile",
+        "tai nghe": "airpods, buds, headphone, earphone",
+        "đồng hồ": "smartwatch, apple watch, samsung watch"
+      };
+
+      for (const [key, synonyms] of Object.entries(synonymMap)) {
+        if (lowerMsg.includes(key)) {
+          expandedQuery += " " + synonyms;
+          break;
+        }
+      }
+
+      console.log(`🔍 Gọi Hybrid Search cho chat: "${message}" (Expanded: "${expandedQuery}"`);
+      const aiQueryResult = await axios.post("http://127.0.0.1:5002/api/search", {
+        query: expandedQuery,
+        top_n: 15
+      }, { timeout: 5000 }).catch(() => ({ data: { results: [] } }));
+
+      const aiSlugs = aiQueryResult.data.results?.map(r => r.slug) || [];
+      
+      // Tìm trong DB các sản phẩm AI gợi ý + Tìm theo regex cơ bản (Hybrid)
+      const regex = new RegExp(message.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
+      
+      const combinedProducts = await Product.find({
+        isActive: true,
+        adminStatus: 'approved',
+        $or: [
+          { slug: { $in: aiSlugs } },
+          { name: regex },
+          { brand: regex }
+        ]
+      }).limit(20).lean();
+
+      rawProducts = combinedProducts;
+    } catch (searchErr) {
+      console.error("Search integration failed, fallback to trending:", searchErr.message);
+      rawProducts = await Product.find({ isActive: true, adminStatus: 'approved' })
+        .sort({ sold: -1 })
+        .limit(10)
+        .lean();
+    }
+
+    // Luôn đảm bảo contextProduct nằm ở đầu danh sách nếu có
+    if (contextProduct) {
+      rawProducts = [contextProduct, ...rawProducts.filter(p => p._id.toString() !== contextProduct._id.toString())];
+    }
+    } // end else
+
+    console.log(`DEBUG: Sending ${rawProducts.length} relevant products to AI (filtered from query: "${message}")`);
+    console.log("Product Names:", rawProducts.map(p => p.name).join(", "));
 
     if (!rawProducts || rawProducts.length === 0) {
       return res.json({
         success: true,
         reply:
-          "Chào bạn, hiện tại shop chưa cập nhật sản phẩm. Bạn quay lại sau nhé!",
+          "Chào bạn, hiện tại shop chưa cập nhật sản phẩm. Bạn hãy để lại thông tin, nhân viên sẽ liên hệ lại nhé!",
         product: null,
       });
     }
 
-    // Chỉ gửi các thông tin cần thiết nhất cho AI (giảm tải dung lượng)
-    const productsForAI = rawProducts.map((p) => ({
-      name: p.name,
-      slug: p.slug, // AI sẽ trả về cái này làm productId
-      price: p.price,
-      brand: p.brand,
-      category: typeof p.category === "object" ? p.category.name : p.category,
-    }));
+    // Chỉ gửi các thông tin cần thiết nhất cho AI (có chứa specs và description cắt ngắn)
+    const productsForAI = rawProducts.slice(0, 20).map((p) => {
+      // Đảm bảo specs là object sạch
+      const specifications = p.specifications || {};
 
-    // BƯỚC 3: GỌI PYTHON AI (SỬA LẠI PAYLOAD)
+      return {
+        name: p.name,
+        slug: p.slug,
+        price: p.price,
+        brand: p.brand,
+        category: typeof p.category === "object" ? p.category?.name : p.category,
+        specs: specifications,
+        description: p.description ? p.description.substring(0, 500) : ""
+      };
+    });
+
+    // BƯỚC 3: GỌI PYTHON AI
     let aiResponse;
     try {
       aiResponse = await axios.post(
-        "http://127.0.0.1:5001/chat", // Cổng 5001 khớp với app.py của bạn
+        "http://127.0.0.1:5001/chat",
         {
           message,
           products: productsForAI,
-          sessionId: sessionId, // Gửi kèm sessionId để AI nhớ hội thoại
+          sessionId: sessionId,
         },
         { timeout: 15000 },
       );
@@ -91,20 +192,33 @@ export const chat = async (req, res) => {
     // BƯỚC 4: Xử lý kết quả từ AI
     let resultProduct = null;
     const aiData = aiResponse.data; // { reply, productId, discount... }
+    console.log("AI Response Data:", JSON.stringify(aiData).substring(0, 300));
 
     if (aiData?.productId) {
-      // Tìm lại thông tin đầy đủ của sản phẩm để hiện ảnh ở Frontend
-      resultProduct = await Product.findOne({
-        slug: aiData.productId,
-        isActive: true,
-      }).lean();
+      try {
+        // Tìm lại thông tin đầy đủ của sản phẩm để hiện ảnh ở Frontend
+        // 🔥 Nếu có contextProduct, ưu tiên dùng luôn (không cần query thêm)
+        if (contextProduct && contextProduct.slug === aiData.productId) {
+          resultProduct = contextProduct;
+        } else {
+          resultProduct = await Product.findOne({
+            slug: aiData.productId,
+            isActive: true,
+          }).lean();
+        }
 
-      if (resultProduct) {
-        await trackBehavior(req, "view", resultProduct._id, message);
+        if (resultProduct) {
+          await trackBehavior(req, "view", resultProduct._id, message);
+        }
+      } catch (productErr) {
+        console.error("Error fetching result product:", productErr.message);
       }
+    } else if (contextProduct && /bảo hành|màu|cấu hình|chi tiết|pin|camera/.test(message.toLowerCase())) {
+      // 🔥 Nếu AI không trả về productId nhưng đây là câu hỏi về context, trả về context product
+      resultProduct = contextProduct;
     }
 
-    // BƯỚC 5: Lưu lịch sử chat vào MongoDB (NodeJS)
+    // BƯỚC 5: Lưu lịch sử chat vào MongoDB (NodeJS) - ChatHistory cho AI
     await ChatHistory.create({
       user: req.user?._id || null,
       sessionId: sessionId,
@@ -115,6 +229,30 @@ export const chat = async (req, res) => {
       ip: userIp,
       userAgent: userAgent,
     });
+
+    // BƯỚC 6: ĐỒNG BỘ VỚI CHAT ADMIN (ĐỂ ADMIN THEO DÕI)
+    try {
+      const adminQuery = req.user?._id 
+        ? { userId: req.user._id, status: 'active' }
+        : { conversationId: { $regex: sessionId }, status: 'active' }; // Fallback to session search if guest
+
+      let adminConversation = await ChatAdmin.findOne(adminQuery);
+      
+      if (adminConversation) {
+        const aiMessage = {
+          senderId: req.user?._id || adminConversation.userId, // Use existing userId if guest
+          senderType: 'admin',
+          message: aiData?.reply || "Tôi có thể giúp gì cho bạn?",
+          products: resultProduct ? [resultProduct] : [],
+          createdAt: new Date()
+        };
+        adminConversation.messages.push(aiMessage);
+        adminConversation.lastMessageAt = new Date();
+        await adminConversation.save();
+      }
+    } catch (adminErr) {
+      console.error("Lỗi đồng bộ ChatAdmin:", adminErr.message);
+    }
 
     // Trả về kết quả hoàn chỉnh cho React
     return res.json({

@@ -5,14 +5,16 @@ const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
+  const [token, setToken] = useState(null);
   const [loading, setLoading] = useState(true);
 
   // Khôi phục session từ localStorage khi load trang
   useEffect(() => {
-    const token = localStorage.getItem("token");
+    const savedToken = localStorage.getItem("token");
     const savedUser = localStorage.getItem("user");
-    if (token && savedUser) {
+    if (savedToken && savedUser) {
       try {
+        setToken(savedToken);
         setUser(JSON.parse(savedUser));
       } catch (_) {}
     }
@@ -21,18 +23,20 @@ export function AuthProvider({ children }) {
 
   const login = async (email, password) => {
     const data = await authApi.login(email, password);
-    const { token, user: u } = data;
-    localStorage.setItem("token", token);
+    const { token: t, user: u } = data;
+    localStorage.setItem("token", t);
     localStorage.setItem("user", JSON.stringify(u));
+    setToken(t);
     setUser(u);
     return u;
   };
 
   const loginWithGoogle = async (idToken) => {
     const data = await authApi.loginWithGoogle(idToken);
-    const { token, user: u } = data;
-    localStorage.setItem("token", token);
+    const { token: t, user: u } = data;
+    localStorage.setItem("token", t);
     localStorage.setItem("user", JSON.stringify(u));
+    setToken(t);
     setUser(u);
     return u;
   };
@@ -45,6 +49,7 @@ export function AuthProvider({ children }) {
     try { await authApi.logout(); } catch (_) {}
     localStorage.removeItem("token");
     localStorage.removeItem("user");
+    setToken(null);
     setUser(null);
   };
 
@@ -55,7 +60,7 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, loginWithGoogle, logout, register, updateUser }}>
+    <AuthContext.Provider value={{ user, token, loading, login, loginWithGoogle, logout, register, updateUser }}>
       {children}
     </AuthContext.Provider>
   );

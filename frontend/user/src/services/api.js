@@ -76,6 +76,7 @@ export const productApi = {
 // ── CATEGORIES ────────────────────────────────────────
 export const categoryApi = {
   getAll: () => request("/categories"),
+  getWithCount: () => request("/categories/with-count"),
   getFeatured: () => request("/categories/featured"),
   getBySlug: (slug) => request(`/categories/slug/${encodeURIComponent(slug)}`),
   getProductsBySlug: (slug) => request(`/categories/${slug}/products`),
@@ -187,6 +188,16 @@ export const aiApi = {
         Authorization: getToken() ? `Bearer ${getToken()}` : "",
       },
       body: formData,
+    }).then((res) => res.json());
+  },
+  visualSearchByUrl: (imageUrl) => {
+    return fetch(`${BASE}/ai/visual-search`, {
+       method: "POST",
+       headers: {
+         "Content-Type": "application/json",
+         Authorization: getToken() ? `Bearer ${getToken()}` : "",
+       },
+       body: JSON.stringify({ image_url: imageUrl })
     }).then((res) => res.json());
   },
   getTrendingSearches: () => request("/ai/trending"),

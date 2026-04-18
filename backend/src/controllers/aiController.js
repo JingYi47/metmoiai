@@ -166,18 +166,21 @@ export const syncAIData = async (req, res) => {
 
 // ==================== API 2: SEARCH ====================
 
-export const smartSearch = async (req, res) => {
+export const smartSearch = async (req, res, returnOnly) => {
+  // 🔥 Express truyền next() vào tham số thứ 3, nên phải kiểm tra kiểu dữ liệu
+  const isReturnOnly = returnOnly === true;
   const { q } = req.query;
   const limit = parseInt(req.query.limit) || 20;
   const startTime = Date.now();
 
   if (!q || q.trim() === "") {
-    return res.json({
+    const emptyResult = {
       success: true,
       results: [],
       total: 0,
       message: "Vui lòng nhập từ khóa tìm kiếm",
-    });
+    };
+    return isReturnOnly ? emptyResult : res.json(emptyResult);
   }
 
   const cacheKey = getCacheKey(q, limit);
@@ -186,91 +189,101 @@ export const smartSearch = async (req, res) => {
   // Cache hit
   if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
     console.log(`💾 Cache hit: "${q}"`);
-    return res.json({
+    const cachedResult = {
       success: true,
       query: q,
       total: cached.results.length,
       results: cached.results,
       source: "cache",
       duration: `${Date.now() - startTime}ms`,
-    });
+    };
+    return isReturnOnly ? cachedResult : res.json(cachedResult);
   }
 
-  console.log(`🔍 Tìm kiếm: "${q}"`);
+  console.log(`🔍 Tìm kiếm kết hợp (Hybrid): "${q}"`);
 
   try {
-    const aiResponse = await callAIWithRetry(`${AI_SERVICE_URL}/api/search`, {
-      query: q,
-      top_n: limit,
-    });
+    // 1. Chạy AI Search và DB Search song song
+    const regex = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
+    
+    const [aiResponse, dbMatches] = await Promise.all([
+      callAIWithRetry(`${AI_SERVICE_URL}/api/search`, {
+        query: q,
+        top_n: limit,
+      }).catch(err => {
+        console.error("❌ AI Service failed, using DB only:", err.message);
+        return { data: { results: [] } };
+      }),
+      Product.find({
+        isActive: true,
+        $or: [
+          { name: regex },
+          { brand: regex }
+        ]
+      }).limit(limit).lean()
+    ]);
 
+    // 2. Xử lý kết quả từ AI
+    let aiProducts = [];
     if (aiResponse.data.results && aiResponse.data.results.length > 0) {
       const slugs = aiResponse.data.results.map((r) => r.slug);
-
-      const products = await Product.find({
+      const productsFromAI = await Product.find({
         slug: { $in: slugs },
         isActive: true,
       }).lean();
 
       const productMap = {};
-      products.forEach((p) => {
+      productsFromAI.forEach((p) => {
         productMap[p.slug] = p;
       });
 
-      const sortedResults = slugs
-        .map((slug) => {
-          const prod = productMap[slug];
-          if (prod) {
-            // Đảm bảo có ít nhất 1 hình ảnh
-            prod.thumbnail = prod.images && prod.images.length > 0 ? prod.images[0].url : null;
-          }
-          return prod;
-        })
+      aiProducts = slugs
+        .map((slug) => productMap[slug])
         .filter(Boolean);
+    }
 
-      // Lưu cache
+    // 3. Gộp kết quả và loại bỏ trùng lặp (Ưu tiên DB Match)
+    const combined = [...dbMatches];
+    const seenSlugs = new Set(dbMatches.map(p => p.slug));
+
+    aiProducts.forEach(p => {
+      if (!seenSlugs.has(p.slug)) {
+        combined.push(p);
+        seenSlugs.add(p.slug);
+      }
+    });
+
+    // 4. Giới hạn số lượng trả về
+    const finalResults = combined.slice(0, limit).map(prod => {
+      prod.thumbnail = prod.images && prod.images.length > 0 ? prod.images[0].url : null;
+      return prod;
+    });
+
+    // Lưu cache (chỉ lưu nếu có kết quả)
+    if (finalResults.length > 0) {
       searchCache.set(cacheKey, {
-        results: sortedResults,
+        results: finalResults,
         timestamp: Date.now(),
-      });
-
-      console.log(`✅ AI tìm thấy ${sortedResults.length} kết quả`);
-
-      return res.json({
-        success: true,
-        query: q,
-        total: sortedResults.length,
-        results: sortedResults,
-        source: "ai",
-        duration: `${Date.now() - startTime}ms`,
       });
     }
 
-    // Fallback Level 1
-    console.log("⚠️ AI không có kết quả, fallback...");
+    console.log(`✅ Hybrid Search hoàn tất: found ${finalResults.length} kết quả (${dbMatches.length} DB, ${aiProducts.length} AI)`);
 
-    const fallbackResults = await Product.find({
-      isActive: true,
-      $or: [
-        { name: { $regex: q, $options: "i" } },
-        { brand: { $regex: q, $options: "i" } },
-      ],
-    })
-      .limit(limit)
-      .lean();
-
-    return res.json({
+    const result = {
       success: true,
       query: q,
-      total: fallbackResults.length,
-      results: fallbackResults,
-      source: "fallback",
+      total: finalResults.length,
+      results: finalResults,
+      products: finalResults, // Thêm products cho đồng bộ
+      source: aiProducts.length > 0 ? "hybrid" : "db",
       duration: `${Date.now() - startTime}ms`,
-    });
-  } catch (error) {
-    // Fallback Level 2
-    console.error("❌ AI Service lỗi:", error.message);
+    };
 
+    return isReturnOnly ? result : res.json(result);
+  } catch (error) {
+    console.error("❌ Hybrid Search error:", error.message);
+    
+    // Fallback cuối cùng
     const fallbackResults = await Product.find({
       isActive: true,
       name: { $regex: q.split(" ")[0], $options: "i" },
@@ -278,14 +291,16 @@ export const smartSearch = async (req, res) => {
       .limit(limit)
       .lean();
 
-    return res.json({
+    const errorFallback = {
       success: true,
       query: q,
       total: fallbackResults.length,
       results: fallbackResults,
       source: "error_fallback",
       duration: `${Date.now() - startTime}ms`,
-    });
+    };
+
+    return isReturnOnly ? errorFallback : res.json(errorFallback);
   }
 };
 
@@ -295,23 +310,35 @@ export const smartSearch = async (req, res) => {
 export const visualSearch = async (req, res) => {
   const startTime = Date.now();
   try {
-    if (!req.file) {
-      return res.status(400).json({ success: false, message: "Vui lòng tải lên hình ảnh" });
+    const { image_url } = req.body;
+    if (!req.file && !image_url) {
+      return res.status(400).json({ success: false, message: "Vui lòng cung cấp hình ảnh hoặc URL" });
     }
 
-    console.log(`📷 Tìm kiếm bằng hình ảnh: ${req.file.originalname}`);
+    console.log(`📷 Tìm kiếm bằng hình ảnh: ${req.file?.originalname || image_url}`);
 
-    // Gửi image sang AI Service
-    // Vì dùng axios v1.x, ta có thể dùng FormData native hoặc buffer
-    const formData = new FormData();
-    const blob = new Blob([req.file.buffer], { type: req.file.mimetype });
-    formData.append("image", blob, req.file.originalname);
-    formData.append("top_n", "20");
+    let aiResponse;
+    if (image_url) {
+      // Gửi URL sang AI Service thay vì upload lại binary (Tối ưu lớn)
+      aiResponse = await axios.post(`${AI_SERVICE_URL}/api/visual-search`, 
+        { image_url, top_n: 20 },
+        { 
+          headers: { "Content-Type": "application/json" },
+          timeout: 30000 
+        }
+      );
+    } else {
+      // Logic cũ
+      const formData = new FormData();
+      const blob = new Blob([req.file.buffer], { type: req.file.mimetype });
+      formData.append("image", blob, req.file.originalname);
+      formData.append("top_n", "20");
 
-    const aiResponse = await axios.post(`${AI_SERVICE_URL}/api/visual-search`, formData, {
-      headers: { "Content-Type": "multipart/form-data" },
-      timeout: 30000,
-    });
+      aiResponse = await axios.post(`${AI_SERVICE_URL}/api/visual-search`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+        timeout: 30000,
+      });
+    }
 
     if (aiResponse.data.success && aiResponse.data.results.length > 0) {
       const slugs = aiResponse.data.results.map((r) => r.slug);

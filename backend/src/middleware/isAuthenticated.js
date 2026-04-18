@@ -40,3 +40,14 @@ export const isAuthenticated = (req, res, next) => {
     });
   }
 };
+
+export const isAdmin = (req, res, next) => {
+  if (req.user && req.user.role === "admin") {
+    next();
+  } else {
+    res.status(403).json({
+      success: false,
+      message: "Bạn không có quyền truy cập chức năng này (Admin only)",
+    });
+  }
+};

@@ -8,7 +8,7 @@ import { GoogleOAuthProvider } from '@react-oauth/google';
 
 const GOOGLE_CLIENT_ID =
   (process.env.REACT_APP_GOOGLE_CLIENT_ID || '').trim() ||
-  '159444275497-iur2c71opu8a4csh3qoq7ummoro5l3du.apps.googleusercontent.com';
+  '1033589184287-o0v63n8tfq8vki0t5fedeu1iakhjicec.apps.googleusercontent.com';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(

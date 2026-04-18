@@ -6,18 +6,21 @@ export default function ProductCard({ product }) {
   return (
     <Link to={`/product/${product.id}`} className="product-card">
       <div className="img">
-        <img src={product.images?.[0]?.url} alt={product.name} />
+        <img src={product.images?.[0]?.url || product.imageUrl} alt={product.name} />
       </div>
 
       <h3>{product.name}</h3>
 
-      <p className="price">
-        <span>{product.price.toLocaleString()}đ</span>
-        <span className="original">{product.originalPrice.toLocaleString()}đ</span>
-      </p>
+      <div className="price">
+        <span className="current">{product.price.toLocaleString()}₫</span>
+        {product.originalPrice > product.price && (
+          <span className="original">{product.originalPrice.toLocaleString()}₫</span>
+        )}
+      </div>
 
       <div className="rating">
-        <span>⭐ {product.rating} ({product.reviewCount})</span>
+        <span className="stars">{"★".repeat(Math.round(product.rating))}</span>
+        <span>{product.rating} ({product.reviewCount})</span>
       </div>
     </Link>
   );
