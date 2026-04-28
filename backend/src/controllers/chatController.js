@@ -283,6 +283,7 @@ async function callDifyAIWithRetry(url, data, retries = 3) {
       });
       return response;
     } catch (error) {
+      console.log(error)
       const isLast = i === retries - 1;
       if (isLast) throw error;
       console.log(`⚠️ Retry ${i + 1}/${retries}...`);
@@ -293,7 +294,7 @@ async function callDifyAIWithRetry(url, data, retries = 3) {
 export const chatDify = async (req, res) => {
   try {
     console.log("\n>>> NEW AI CHAT REQUEST RECEIVED <<<");
-    const { message } = req.body;
+    const { message, conversationId } = req.body;
     console.log("Message:", message);
 
     const userIp = req.ip || req.connection?.remoteAddress || "unknown";
@@ -304,7 +305,9 @@ export const chatDify = async (req, res) => {
     let aiResponse = await callDifyAIWithRetry(`${process.env.AI_SERVICE_URL}/chat-messages`, {
       "inputs": {
           "mode": "query",
+          "hasData": "false",
       },
+      "conversation_id": conversationId,
       "query": message,
       "response_mode": "blocking",
       "user": "test_user_01"
@@ -321,6 +324,7 @@ export const chatDify = async (req, res) => {
     }
 
     let results = [];
+    let finalResults = [];
     if (rawResponse?.includes("collection") && rawResponse?.includes("query")) {
       const cleanJsonString = rawResponse.replace(/```json|```/g, "").trim();
 
@@ -340,7 +344,7 @@ export const chatDify = async (req, res) => {
       .toArray();
       console.log('Mongo results', results);
       
-      const finalResults = results.map((prod) => {
+      finalResults = results.map((prod) => {
         if (prod.images && prod.images.length > 0) {
           prod.thumbnail = prod.images[0].url;
         }
@@ -350,6 +354,7 @@ export const chatDify = async (req, res) => {
       aiResponse = await callDifyAIWithRetry(`${process.env.AI_SERVICE_URL}/chat-messages`, {
         "inputs": {
             "mode": "db_result",
+            "hasData": (finalResults || []).length > 0 ? "true" : "false",
             "db_result": JSON.stringify((finalResults || []).slice(0, 15).map((prod) => {
               return {
                 name: prod.name,
@@ -359,6 +364,7 @@ export const chatDify = async (req, res) => {
               };
             }))
         },
+        "conversation_id": conversationId,
         "query": message,
         "response_mode": "blocking",
         "user": "test_user_01"
@@ -408,7 +414,8 @@ export const chatDify = async (req, res) => {
 
     return res.json({
       success: true,
-      products: [],
+      product: finalResults,
+      conversationId: aiResponse?.data?.conversation_id,
       reply: aiResponse?.data?.answer || "Tôi có thể giúp gì cho bạn?",
     });
 

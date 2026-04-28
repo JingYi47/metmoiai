@@ -51,16 +51,10 @@ export default function SearchPage() {
       return;
     }
 
-    // 2. XỬ LÝ TÌM KIẾM THÔNG MINH (TEXT)
-    if (!q) {
-      setProducts([]);
-      return;
-    }
-
     setLoading(true);
     // Use AI Smart Search for better intent-based results
     aiApi
-      .smartSearchDify(q)
+      .smartSearchDify(q || '')
       .then((res) => {
         const raw = (res && res.success) ? (res.results || res.products || []) : [];
         setProducts(

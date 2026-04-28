@@ -191,13 +191,6 @@ export const difySmartSearch = async (req, res) => {
   const { q } = req.query;
   const startTime = Date.now();
 
-  if (!q || q.trim() === "") {
-    return res.status(400).json({
-      success: false,
-      message: "Vui lòng nhập từ khóa tìm kiếm",
-    });
-  }
-
   try {
     const aiResponse = await callDifyAIWithRetry(`${AI_SERVICE_URL}/workflows/run`, {
       "inputs": {

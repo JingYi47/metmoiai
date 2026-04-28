@@ -169,22 +169,28 @@ export default function ChatFloating() {
 
   const fetchHistory = async () => {
     try {
-      const res = await axios.get(`${API_BASE_URL}/history`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (res.data.success) {
-        setConversation(res.data.conversation);
-        const fetchedMessages = res.data.conversation.messages || [];
-        if (fetchedMessages.length === 0) {
-          setMessages([{
+      // const res = await axios.get(`${API_BASE_URL}/history`, {
+      //   headers: { Authorization: `Bearer ${token}` }
+      // });
+      // if (res.data.success) {
+      //   // setConversation(res.data.conversation);
+      //   const fetchedMessages = res.data.conversation.messages || [];
+      //   if (fetchedMessages.length === 0) {
+      //     setMessages([{
+      //       message: '👋 Chào bạn! Mình là trợ lý ảo của Pandora. Bạn cần hỗ trợ tư vấn sản phẩm, mua sắm hay tra cứu đơn hàng nào?',
+      //       senderType: 'admin',
+      //       createdAt: new Date().toISOString()
+      //     }]);
+      //   } else {
+      //     setMessages(fetchedMessages);
+      //   }
+        setMessages([
+          {
             message: '👋 Chào bạn! Mình là trợ lý ảo của Pandora. Bạn cần hỗ trợ tư vấn sản phẩm, mua sắm hay tra cứu đơn hàng nào?',
             senderType: 'admin',
             createdAt: new Date().toISOString()
-          }]);
-        } else {
-          setMessages(fetchedMessages);
-        }
-      }
+          }
+      ]);
     } catch (error) {
       console.error('Error fetching chat history:', error);
     }
@@ -240,19 +246,24 @@ export default function ChatFloating() {
       // Sử dụng API_BASE_URL gốc để đảm bảo đồng bộ với các API khác
       const aiRes = await axios.post(API_BASE_URL.replace('/chat-admin', '/chat/chat-v2'), {
         message: currentMessage,
-        contextProductId: contextId
+        contextProductId: contextId,
+        conversationId: conversation?.conversationId,
       }, {
         headers: headers,
         timeout: 30000
       });
 
       if (aiRes.data.success) {
-        const hasProduct = !!aiRes.data.product;
+        const hasProduct = (aiRes.data.product || []).length;
+        const conversationId = aiRes.data.conversationId;
+        if (conversationId) {
+          setConversation({conversationId: conversationId});
+        }
         const botMsg = {
           message: marked.parse(aiRes.data.reply),
           senderType: 'admin',
           createdAt: new Date().toISOString(),
-          products: hasProduct ? [aiRes.data.product] : [],
+          products: hasProduct ? aiRes.data.product : [],
           smartChips: hasProduct ? ["Sản phẩm này có bảo hành không?", "Có màu nào khác không?", "Xem đánh giá của khách hàng"] : []
         };
         setMessages(prev => [...prev, botMsg]);
@@ -522,7 +533,7 @@ export default function ChatFloating() {
                               <h4 title={p.name}>{p.name}</h4>
                               <p className="cp-price">{p.price?.toLocaleString()}đ</p>
                               <div className="cp-actions">
-                                <a href={`/product/${p.slug}`} className="cp-link" target="_blank" rel="noreferrer">Xem</a>
+                                <a href={`/product/${p._id || p.slug}`} className="cp-link" target="_blank" rel="noreferrer">Xem</a>
                                 <button className="cp-add-cart" onClick={() => handleAddToCart(p)}>+ Giỏ hàng</button>
                               </div>
                             </div>
