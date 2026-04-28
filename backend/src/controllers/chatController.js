@@ -3,6 +3,7 @@ import Behavior from "../models/behaviorModel.js";
 import ChatHistory from "../models/chatHistoryModel.js";
 import ChatAdmin from "../models/chatAdminModel.js";
 import axios from "axios";
+import mongoose from "mongoose";
 
 // ==========================================
 // 1. HELPER FUNCTIONS
@@ -261,6 +262,156 @@ export const chat = async (req, res) => {
       product: resultProduct, // Có chứa images, price, name để render Card
       discount: aiData?.discount || 0,
     });
+  } catch (err) {
+    console.error("Chat Controller Critical Error:", err.message);
+    return res.status(500).json({
+      success: false,
+      reply: "Rất tiếc, hệ thống đang bận. Vui lòng thử lại sau!",
+    });
+  }
+};
+
+async function callDifyAIWithRetry(url, data, retries = 3) {
+  for (let i = 0; i < retries; i++) {
+    try {
+      const response = await axios.post(url, data, {
+        timeout: 30000,
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${process.env.DIFY_API_KEY_CHAT}`,
+        },
+      });
+      return response;
+    } catch (error) {
+      const isLast = i === retries - 1;
+      if (isLast) throw error;
+      console.log(`⚠️ Retry ${i + 1}/${retries}...`);
+      await new Promise((r) => setTimeout(r, 1000 * (i + 1)));
+    }
+  }
+}
+export const chatDify = async (req, res) => {
+  try {
+    console.log("\n>>> NEW AI CHAT REQUEST RECEIVED <<<");
+    const { message } = req.body;
+    console.log("Message:", message);
+
+    const userIp = req.ip || req.connection?.remoteAddress || "unknown";
+    const userAgent = req.headers["user-agent"] || "unknown";
+
+    await trackBehavior(req, "search", null, message);
+
+    let aiResponse = await callDifyAIWithRetry(`${process.env.AI_SERVICE_URL}/chat-messages`, {
+      "inputs": {
+          "mode": "query",
+      },
+      "query": message,
+      "response_mode": "blocking",
+      "user": "test_user_01"
+    });
+
+    const difyResult = aiResponse.data;
+    console.log("🔍 Dify Smart Search Response:", JSON.stringify(difyResult, null, 2));
+
+    // Dify Workflow blocking output path: .data.outputs.search_query
+    const rawResponse = difyResult?.answer;
+
+    if (!rawResponse) {
+      throw new Error("AI không trả về kết quả truy vấn hợp lệ (outputs.search_query missing)");
+    }
+
+    let results = [];
+    if (rawResponse?.includes("collection") && rawResponse?.includes("query")) {
+      const cleanJsonString = rawResponse.replace(/```json|```/g, "").trim();
+
+      const queryObj = JSON.parse(cleanJsonString);
+      console.log("🔍 Dify Smart Search Query:", queryObj);
+
+      const mongoQuery = queryObj.query || {};
+      const collectionName = queryObj.collection || "products";
+      const sort = queryObj.sort || {};
+      const limit = parseInt(queryObj.limit) || 20;
+    
+      results = await mongoose.connection.db
+      .collection(collectionName)
+      .find(mongoQuery)
+      .sort(sort)
+      .limit(limit)
+      .toArray();
+      console.log('Mongo results', results);
+      
+      const finalResults = results.map((prod) => {
+        if (prod.images && prod.images.length > 0) {
+          prod.thumbnail = prod.images[0].url;
+        }
+        return prod;
+      });
+
+      aiResponse = await callDifyAIWithRetry(`${process.env.AI_SERVICE_URL}/chat-messages`, {
+        "inputs": {
+            "mode": "db_result",
+            "db_result": JSON.stringify((finalResults || []).slice(0, 15).map((prod) => {
+              return {
+                name: prod.name,
+                price: prod.price,
+                thumbnail: prod.thumbnail,
+                specifications: prod.specifications,
+              };
+            }))
+        },
+        "query": message,
+        "response_mode": "blocking",
+        "user": "test_user_01"
+      });
+
+      console.log('aiResponseee', aiResponse)
+    }
+
+    const sessionId =
+      req.headers["x-session-id"] || req.sessionID || "guest_default";
+
+    // Lưu lịch sử chat vào MongoDB (NodeJS) - ChatHistory cho AI
+    await ChatHistory.create({
+      user: req.user?._id || null,
+      sessionId: sessionId,
+      message: message,
+      response: aiResponse?.data?.answer || "Tôi có thể giúp gì cho bạn?",
+      productId: null,
+      intent: aiResponse?.data?.intent || "consultation",
+      ip: userIp,
+      userAgent: userAgent,
+    });
+
+    // ĐỒNG BỘ VỚI CHAT ADMIN (ĐỂ ADMIN THEO DÕI)
+    try {
+      const adminQuery = req.user?._id 
+        ? { userId: req.user._id, status: 'active' }
+        : { conversationId: { $regex: sessionId }, status: 'active' }; // Fallback to session search if guest
+
+      let adminConversation = await ChatAdmin.findOne(adminQuery);
+      
+      if (adminConversation) {
+        const aiMessage = {
+          senderId: req.user?._id || adminConversation.userId, // Use existing userId if guest
+          senderType: 'admin',
+          message: aiResponse?.data?.answer || "Tôi có thể giúp gì cho bạn?",
+          products: finalResults || [],
+          createdAt: new Date()
+        };
+        adminConversation.messages.push(aiMessage);
+        adminConversation.lastMessageAt = new Date();
+        await adminConversation.save();
+      }
+    } catch (adminErr) {
+      console.error("Lỗi đồng bộ ChatAdmin:", adminErr.message);
+    }
+
+    return res.json({
+      success: true,
+      products: [],
+      reply: aiResponse?.data?.answer || "Tôi có thể giúp gì cho bạn?",
+    });
+
   } catch (err) {
     console.error("Chat Controller Critical Error:", err.message);
     return res.status(500).json({

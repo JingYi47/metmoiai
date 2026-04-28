@@ -3,6 +3,7 @@ import multer from "multer";
 import {
   syncAIData,
   smartSearch,
+  difySmartSearch,
   visualSearch,
   getAIStatus,
   clearCache,
@@ -13,6 +14,7 @@ const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage() });
 
 // PUBLIC API
+router.get("/dify-smart-search", difySmartSearch);
 router.get("/search", smartSearch);
 router.post("/visual-search", upload.single("image"), visualSearch);
 router.get("/status", getAIStatus);

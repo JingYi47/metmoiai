@@ -4,6 +4,7 @@
  */
 
 import axios from "axios";
+import mongoose from "mongoose";
 import Product from "../models/productModel.js";
 
 const AI_SERVICE_URL = process.env.AI_SERVICE_URL || "http://127.0.0.1:5002";
@@ -26,6 +27,26 @@ async function callAIWithRetry(url, data, retries = 3) {
   for (let i = 0; i < retries; i++) {
     try {
       const response = await axios.post(url, data, { timeout: 10000 });
+      return response;
+    } catch (error) {
+      const isLast = i === retries - 1;
+      if (isLast) throw error;
+      console.log(`⚠️ Retry ${i + 1}/${retries}...`);
+      await new Promise((r) => setTimeout(r, 1000 * (i + 1)));
+    }
+  }
+}
+
+async function callDifyAIWithRetry(url, data, retries = 3) {
+  for (let i = 0; i < retries; i++) {
+    try {
+      const response = await axios.post(url, data, {
+        timeout: 12000,
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${process.env.DIFY_API_KEY}`,
+        },
+      });
       return response;
     } catch (error) {
       const isLast = i === retries - 1;
@@ -165,6 +186,76 @@ export const syncAIData = async (req, res) => {
 };
 
 // ==================== API 2: SEARCH ====================
+
+export const difySmartSearch = async (req, res) => {
+  const { q } = req.query;
+  const startTime = Date.now();
+
+  if (!q || q.trim() === "") {
+    return res.status(400).json({
+      success: false,
+      message: "Vui lòng nhập từ khóa tìm kiếm",
+    });
+  }
+
+  try {
+    const aiResponse = await callDifyAIWithRetry(`${AI_SERVICE_URL}/workflows/run`, {
+      "inputs": {
+          "query": q 
+      },
+      "response_mode": "blocking",
+      "user": "test_user_01",
+    });
+
+    const difyResult = aiResponse.data;
+    console.log("🔍 Dify Smart Search Response:", JSON.stringify(difyResult, null, 2));
+
+    // Dify Workflow blocking output path: .data.outputs.search_query
+    const rawResponse = difyResult?.data?.outputs?.search_query;
+
+    if (!rawResponse) {
+      throw new Error("AI không trả về kết quả truy vấn hợp lệ (outputs.search_query missing)");
+    }
+    const cleanJsonString = rawResponse.replace(/```json|```/g, "").trim();
+
+    const queryObj = JSON.parse(cleanJsonString);
+    console.log("🔍 Dify Smart Search Query:", queryObj);
+
+    const collectionName = queryObj.collection || "products";
+    const mongoQuery = queryObj.query || {};
+    const sort = queryObj.sort || {};
+    const limit = parseInt(queryObj.limit) || 20;
+
+    const results = await mongoose.connection.db
+      .collection(collectionName)
+      .find(mongoQuery)
+      .sort(sort)
+      .limit(limit)
+      .toArray();
+    console.log('Mongo results', results);
+    const finalResults = results.map((prod) => {
+      if (prod.images && prod.images.length > 0) {
+        prod.thumbnail = prod.images[0].url;
+      }
+      return prod;
+    });
+
+    return res.json({
+      success: true,
+      query: q,
+      total: finalResults.length,
+      results: finalResults,
+      duration: `${Date.now() - startTime}ms`,
+    });
+  } catch (e) {
+    console.error("❌ Lỗi Dify Smart Search:", e);
+    return res.status(500).json({
+      success: false,
+      message: "Lỗi xử lý tìm kiếm thông minh",
+      error: e.message,
+    });
+  }
+};
 
 export const smartSearch = async (req, res, returnOnly) => {
   // 🔥 Express truyền next() vào tham số thứ 3, nên phải kiểm tra kiểu dữ liệu

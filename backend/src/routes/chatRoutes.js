@@ -3,7 +3,8 @@ import {
   chat,
   getChatHistory,
   clearChatHistory,
-  getPersonalizedRecommendations, // Thêm hàm này vào
+  getPersonalizedRecommendations,
+  chatDify, // Thêm hàm này vào
 } from "../controllers/chatController.js";
 import { isAuthenticated } from "../middleware/isAuthenticated.js";
 import {
@@ -31,6 +32,8 @@ router.post(
   checkSpam, 
   chat, 
 );
+
+router.post("/chat-v2", chatDify);
 
 // 4. Quản lý lịch sử chat
 router.get("/history", isAuthenticated, getChatHistory);
