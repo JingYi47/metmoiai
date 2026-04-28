@@ -60,7 +60,7 @@ export default function SearchPage() {
     setLoading(true);
     // Use AI Smart Search for better intent-based results
     aiApi
-      .smartSearch(q, 20)
+      .smartSearchDify(q)
       .then((res) => {
         const raw = (res && res.success) ? (res.results || res.products || []) : [];
         setProducts(

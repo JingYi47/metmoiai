@@ -43,7 +43,7 @@ const Chatbot = () => {
       console.log("👉 SEND:", textToSend);
 
       const res = await axios.post(
-        `${BASE_URL}/api/v1/chat`,
+        `${BASE_URL}/api/v1/chat-v2`,
         { message: textToSend },
         {
           headers: {

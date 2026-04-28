@@ -6,6 +6,7 @@ import { QUICK_QUESTIONS } from './faqData';
 import axios from 'axios';
 import { cartApi, orderApi, aiApi } from '../../services/api';
 import './ChatFloating.css';
+import { marked } from 'marked';
 
 const SOCKET_URL = 'http://localhost:8000/chat-admin';
 const API_BASE_URL = 'http://localhost:8000/api/v1/chat-admin';
@@ -237,7 +238,7 @@ export default function ChatFloating() {
       if (token) headers.Authorization = `Bearer ${token}`;
 
       // Sử dụng API_BASE_URL gốc để đảm bảo đồng bộ với các API khác
-      const aiRes = await axios.post(API_BASE_URL.replace('/chat-admin', '/chat'), {
+      const aiRes = await axios.post(API_BASE_URL.replace('/chat-admin', '/chat/chat-v2'), {
         message: currentMessage,
         contextProductId: contextId
       }, {
@@ -248,7 +249,7 @@ export default function ChatFloating() {
       if (aiRes.data.success) {
         const hasProduct = !!aiRes.data.product;
         const botMsg = {
-          message: aiRes.data.reply,
+          message: marked.parse(aiRes.data.reply),
           senderType: 'admin',
           createdAt: new Date().toISOString(),
           products: hasProduct ? [aiRes.data.product] : [],
@@ -509,7 +510,7 @@ export default function ChatFloating() {
                         ))}
                       </div>
                     )}
-                    {msg.message && <p>{msg.message}</p>}
+                    {msg.message && msg.message?.includes('<') && msg.message?.includes('>') ? <p dangerouslySetInnerHTML={{ __html: msg.message }} /> : <p>{msg.message}</p>}
                     
                     {/* PRODUCT CARDS IN CHAT */}
                     {msg.products && msg.products.length > 0 && (

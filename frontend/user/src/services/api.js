@@ -179,6 +179,8 @@ export const chatApi = {
 export const aiApi = {
   smartSearch: (q, limit = 5) =>
     request(`/ai/search?q=${encodeURIComponent(q)}&limit=${limit}`),
+  smartSearchDify: (q) =>
+    request(`/ai/dify-smart-search?q=${encodeURIComponent(q)}`),
   visualSearch: (file) => {
     const formData = new FormData();
     formData.append("image", file);
